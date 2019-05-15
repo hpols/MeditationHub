@@ -60,18 +60,32 @@ public class RvConfig {
         @Override
         public void onBindViewHolder(@NonNull BookItemView bookItemView, int i) {
             final MeditationLocal currentMeditation = meditations.get(i);
+            final boolean isStored;
 
             bookItemView.mTitle.setText(currentMeditation.getTitle());
             bookItemView.subtitleTv.setText(currentMeditation.getSubtitle());
 
             //set Action image
             int actionImage;
-            if(currentMeditation.getLocation().contains("https://")) {
+            if(currentMeditation.getStorage() == null) {
                 actionImage = android.R.drawable.stat_sys_download;
+                isStored =false;
             } else {
                 actionImage = android.R.drawable.ic_media_play;
+                isStored = true;
             }
             bookItemView.actionIb.setImageResource(actionImage);
+
+            bookItemView.actionIb.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if(isStored) {
+                        //start mediaplayer
+                    }else {
+                        //download file
+                    }
+                }
+            });
         }
 
         @Override
