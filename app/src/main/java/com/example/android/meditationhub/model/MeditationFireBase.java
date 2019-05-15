@@ -1,16 +1,16 @@
 package com.example.android.meditationhub.model;
 
-public class Meditation {
+public class MeditationFireBase {
 
     private String filename;
     private String location;
     private String subtitle;
     private String title;
 
-    public Meditation() {
+    public MeditationFireBase() {
     }
 
-    public Meditation(String filename, String location, String subtitle, String title) {
+    public MeditationFireBase(String filename, String location, String subtitle, String title) {
         this.filename = filename;
         this.location = location;
         this.subtitle = subtitle;
@@ -21,7 +21,7 @@ public class Meditation {
         return filename;
     }
 
-    public Meditation setFilename(String filename) {
+    public MeditationFireBase setFilename(String filename) {
         this.filename = filename;
         return this;
     }
@@ -30,7 +30,7 @@ public class Meditation {
         return location;
     }
 
-    public Meditation setLocation(String location) {
+    public MeditationFireBase setLocation(String location) {
         this.location = location;
         return this;
     }
@@ -39,7 +39,7 @@ public class Meditation {
         return subtitle;
     }
 
-    public Meditation setSubtitle(String subtitle) {
+    public MeditationFireBase setSubtitle(String subtitle) {
         this.subtitle = subtitle;
         return this;
     }
@@ -48,7 +48,7 @@ public class Meditation {
         return title;
     }
 
-    public Meditation setTitle(String title) {
+    public MeditationFireBase setTitle(String title) {
         this.title = title;
         return this;
     }

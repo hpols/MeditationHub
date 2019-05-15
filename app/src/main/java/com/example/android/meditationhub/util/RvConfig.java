@@ -11,7 +11,7 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 
 import com.example.android.meditationhub.R;
-import com.example.android.meditationhub.model.Meditation;
+import com.example.android.meditationhub.model.MeditationLocal;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
@@ -26,11 +26,12 @@ public class RvConfig {
     private FirebaseAuth mAuth;
     private static FirebaseUser user;
 
-    public void setConfig(RecyclerView recyclerView, Context ctxt, List<Meditation> meditations, List<String> keys) {
+
+    public void setConfig(RecyclerView recyclerView, Context ctxt, List<MeditationLocal> meditationLocals, List<String> keys) {
         mAuth = FirebaseAuth.getInstance();
         user = mAuth.getCurrentUser();
         this.ctxt = ctxt;
-        meditationRV = new MeditationRV(meditations, keys);
+        meditationRV = new MeditationRV(meditationLocals, keys);
         recyclerView.setLayoutManager(new LinearLayoutManager(ctxt));
         recyclerView.setAdapter(meditationRV);
     }
@@ -38,10 +39,10 @@ public class RvConfig {
 
     class MeditationRV extends RecyclerView.Adapter<BookItemView> {
 
-        private List<Meditation> meditations;
+        private List<MeditationLocal> meditations;
         private List<String> keys;
 
-        public MeditationRV(List<Meditation> meditations, List<String> keys) {
+        public MeditationRV(List<MeditationLocal> meditations, List<String> keys) {
             this.meditations = meditations;
             this.keys = keys;
         }
@@ -58,7 +59,7 @@ public class RvConfig {
 
         @Override
         public void onBindViewHolder(@NonNull BookItemView bookItemView, int i) {
-            final Meditation currentMeditation = meditations.get(i);
+            final MeditationLocal currentMeditation = meditations.get(i);
 
             bookItemView.mTitle.setText(currentMeditation.getTitle());
             bookItemView.subtitleTv.setText(currentMeditation.getSubtitle());
