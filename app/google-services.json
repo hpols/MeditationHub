@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "255816780414",
+    "firebase_url": "https://meditationhub-955ce.firebaseio.com",
+    "project_id": "meditationhub-955ce",
+    "storage_bucket": "meditationhub-955ce.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:255816780414:android:05b34f069658831f",
+        "android_client_info": {
+          "package_name": "com.example.android.meditationhub"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "255816780414-kkrf3kph5teplj5tpkhr3sis407793u7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.android.meditationhub",
+            "certificate_hash": "57bfb1e370d628548f3958998fd985b33105a93e"
+          }
+        },
+        {
+          "client_id": "255816780414-46o2f7svcerm44gb47p4k6qf7blek5k5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA-divS3gtGXE7wFC6CF-jFOA9gpX43r1c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "255816780414-46o2f7svcerm44gb47p4k6qf7blek5k5.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
