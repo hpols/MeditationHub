@@ -4,6 +4,7 @@ import android.arch.persistence.room.ColumnInfo;
 import android.arch.persistence.room.Entity;
 import android.arch.persistence.room.Ignore;
 import android.arch.persistence.room.PrimaryKey;
+import android.support.annotation.NonNull;
 
 @Entity(tableName = "meditations")
 public class MeditationLocal {
@@ -15,9 +16,10 @@ public class MeditationLocal {
     private static final String TITLE = "title";
     private static final String STORAGE = "storage";
 
+    @NonNull
     @PrimaryKey
     @ColumnInfo(name = ID)
-    private int id;
+    private String id;
     @ColumnInfo(name = FILENAME)
     private String filename;
     @ColumnInfo(name = LOCATION)
@@ -35,7 +37,7 @@ public class MeditationLocal {
     }
 
     //with ID for Room
-    public MeditationLocal(int id, String filename, String location, String subtitle, String title, String storage) {
+    MeditationLocal(String id, String filename, String location, String subtitle, String title, String storage) {
         this.id = id;
         this.filename = filename;
         this.location = location;
@@ -44,7 +46,7 @@ public class MeditationLocal {
         this.storage = storage;
     }
 
-    public String getFilename() {
+    String getFilename() {
         return filename;
     }
 
@@ -80,11 +82,11 @@ public class MeditationLocal {
         return this;
     }
 
-    public int getId() {
+    public String getId() {
         return id;
     }
 
-    public MeditationLocal setId(int id) {
+    public MeditationLocal setId(String id) {
         this.id = id;
         return this;
     }

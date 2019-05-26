@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -20,7 +21,7 @@ import com.example.android.meditationhub.model.MeditationLocal;
 import com.example.android.meditationhub.model.MeditationLocalDb;
 import com.example.android.meditationhub.model.MeditationLocalViewModel;
 import com.example.android.meditationhub.util.EntryExecutor;
-import com.example.android.meditationhub.util.RvConfig;
+import com.example.android.meditationhub.util.MeditationRV;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
@@ -40,6 +41,8 @@ public class MainActivity extends AppCompatActivity {
     private FirebaseDatabase firebaseDb;
     private MeditationLocalDb meditationLocalDb;
     private DatabaseReference refMeditation;
+
+    private MeditationRV medRv;
 
     private ActivityMainBinding mainBinding;
     private List<MeditationFireBase> meditationsFb = new ArrayList<>();
@@ -89,7 +92,9 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onChanged(@Nullable List<MeditationLocal> meditationLocals) {
                 Timber.d("Updating entries from LiveData in ViewModel");
-                new RvConfig().setConfig(mainBinding.meditationListRv, MainActivity.this, meditationLocals, keys);
+                medRv = new MeditationRV(MainActivity.this, meditationLocals, keys);
+                mainBinding.meditationListRv.setLayoutManager(new LinearLayoutManager(MainActivity.this));
+                mainBinding.meditationListRv.setAdapter(medRv);
             }
         });
     }
@@ -100,12 +105,16 @@ public class MainActivity extends AppCompatActivity {
         receivedMeditation.setSubtitle(meditations.getSubtitle());
         receivedMeditation.setFilename(meditations.getFilename());
         receivedMeditation.setLocation(meditations.getLocation());
-        receivedMeditation.setId(Integer.parseInt(key));
+        receivedMeditation.setId(key);
         receivedMeditation.setStorage(null);
         EntryExecutor.getInstance().diskIO().execute(new Runnable() {
             @Override
             public void run() {
-                meditationLocalDb.meditationLocalDao().createEntry(receivedMeditation);
+
+                long id = meditationLocalDb.meditationLocalDao().createEntry(receivedMeditation);
+                    if (id == -1) {
+                        meditationLocalDb.meditationLocalDao().updateEntry(receivedMeditation);
+                    }
             }
         });
     }
@@ -148,7 +157,7 @@ public class MainActivity extends AppCompatActivity {
             case R.id.logout_menu:
                 mAuth.signOut();
                 invalidateOptionsMenu();
-                RvConfig.logout();
+                MeditationRV.logout();
                 return true;
         }
         return super.onOptionsItemSelected(item);

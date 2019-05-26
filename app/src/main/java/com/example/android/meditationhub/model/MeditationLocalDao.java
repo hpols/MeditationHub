@@ -15,8 +15,8 @@ public interface MeditationLocalDao {
 
     //––– CREATE Methods –––//
 
-    @Insert
-    void createEntry(MeditationLocal meditationLocal);
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    long createEntry(MeditationLocal meditationLocal);
 
     //––– READ Methods –––//
 
@@ -26,7 +26,7 @@ public interface MeditationLocalDao {
 
     //––– UPDATE Methods –––//
 
-    @Update(onConflict = OnConflictStrategy.REPLACE)
+    @Update(onConflict = OnConflictStrategy.IGNORE)
     void updateEntry(MeditationLocal meditationLocal);
 
     // –––DELETE METHODS –––//
