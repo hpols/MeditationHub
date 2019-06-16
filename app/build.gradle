@@ -51,6 +51,8 @@ dependencies {
     annotationProcessor "android.arch.lifecycle:compiler:$aac_version"
     annotationProcessor "android.arch.persistence.room:compiler:$aac_version"
     testImplementation "android.arch.persistence.room:testing:$aac_version"
+
+    implementation 'com.nabinbhandari.android:permissions:3.8' //Android Permissions
 }
 
 apply plugin: 'com.google.gms.google-services' //firebase

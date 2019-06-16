@@ -6,6 +6,7 @@ import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
@@ -16,6 +17,8 @@ import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
+
+import timber.log.Timber;
 
 public class SignInActivity extends AppCompatActivity {
 
@@ -29,6 +32,10 @@ public class SignInActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         signInBinding = DataBindingUtil.setContentView(this, R.layout.activity_sign_in);
+
+        if (BuildConfig.DEBUG) {
+            Timber.plant(new Timber.DebugTree());
+        }
 
         mAuth = FirebaseAuth.getInstance();
 
@@ -44,15 +51,16 @@ public class SignInActivity extends AppCompatActivity {
         signInBinding.logRegBt.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(isEmpty()) return;
+                if (isEmpty()) return;
                 inProgress(true);
 
-                if(isLogin) {
+                if (isLogin) {
                     mAuth.signInWithEmailAndPassword(signInBinding.emailEditText.getText().toString(),
                             signInBinding.passwordEditText.getText().toString()).addOnSuccessListener(new OnSuccessListener<AuthResult>() {
                         @Override
                         public void onSuccess(AuthResult authResult) {
-                            Toast.makeText(SignInActivity.this, "You have been signed in", Toast.LENGTH_SHORT).show();;
+                            Toast.makeText(SignInActivity.this, "You have been signed in", Toast.LENGTH_SHORT).show();
+                            ;
                             Intent intent = new Intent(SignInActivity.this, MainActivity.class);
                             intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                             startActivity(intent);
@@ -64,19 +72,21 @@ public class SignInActivity extends AppCompatActivity {
                         public void onFailure(@NonNull Exception e) {
                             inProgress(false);
                             Toast.makeText(SignInActivity.this, "Sign in failed: " + e, Toast.LENGTH_SHORT).show();
+                            Timber.e(e);
                         }
                     });
                 } else {
-                    if(TextUtils.isEmpty(signInBinding.activationEt.getText().toString())) {
+                    if (TextUtils.isEmpty(signInBinding.activationEt.getText().toString())) {
                         signInBinding.activationEt.setError("REQUIRED");
                         return;
                     }
-                    if(signInBinding.activationEt.getText().toString() != BuildConfig.ACTIVATION_KEY) {
+                    if (signInBinding.activationEt.getText().toString() != BuildConfig.ACTIVATION_KEY) {
                         mAuth.createUserWithEmailAndPassword(signInBinding.emailEditText.getText().toString(),
                                 signInBinding.passwordEditText.getText().toString()).addOnSuccessListener(new OnSuccessListener<AuthResult>() {
                             @Override
                             public void onSuccess(AuthResult authResult) {
-                                Toast.makeText(SignInActivity.this, "You account has been created", Toast.LENGTH_SHORT).show();;
+                                Toast.makeText(SignInActivity.this, "You account has been created", Toast.LENGTH_SHORT).show();
+                                ;
                                 Intent intent = new Intent(SignInActivity.this, MainActivity.class);
                                 intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                                 startActivity(intent);
@@ -87,6 +97,7 @@ public class SignInActivity extends AppCompatActivity {
                             public void onFailure(@NonNull Exception e) {
                                 inProgress(false);
                                 Toast.makeText(SignInActivity.this, "Registration has failed: " + e, Toast.LENGTH_SHORT).show();
+                                Timber.e(e);
                             }
                         });
                     } else {
@@ -109,7 +120,7 @@ public class SignInActivity extends AppCompatActivity {
 
     private void setupLogRegButton() {
         if (signInBinding.regLogSwitch.isChecked()) {
-            isLogin =true;
+            isLogin = true;
             signInBinding.activationEt.setVisibility(View.GONE);
         } else {
             isLogin = false;
@@ -118,7 +129,7 @@ public class SignInActivity extends AppCompatActivity {
     }
 
     private void inProgress(boolean x) {
-        if(x) {
+        if (x) {
             signInBinding.loginProgressBar.setVisibility(View.VISIBLE);
             signInBinding.logRegBt.setEnabled(false);
             signInBinding.regLogSwitch.setEnabled(false);
@@ -132,11 +143,11 @@ public class SignInActivity extends AppCompatActivity {
     }
 
     private boolean isEmpty() {
-        if(TextUtils.isEmpty(signInBinding.emailEditText.getText().toString())) {
+        if (TextUtils.isEmpty(signInBinding.emailEditText.getText().toString())) {
             signInBinding.emailEditText.setError("REQUI RED");
             return true;
         }
-        if(TextUtils.isEmpty(signInBinding.passwordEditText.getText().toString())) {
+        if (TextUtils.isEmpty(signInBinding.passwordEditText.getText().toString())) {
             signInBinding.passwordEditText.setError("REQUIRED");
             return true;
         }

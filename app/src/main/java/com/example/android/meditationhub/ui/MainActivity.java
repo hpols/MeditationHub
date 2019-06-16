@@ -14,6 +14,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 
+import com.example.android.meditationhub.BuildConfig;
 import com.example.android.meditationhub.R;
 import com.example.android.meditationhub.databinding.ActivityMainBinding;
 import com.example.android.meditationhub.model.MeditationFireBase;
@@ -21,7 +22,7 @@ import com.example.android.meditationhub.model.MeditationLocal;
 import com.example.android.meditationhub.model.MeditationLocalDb;
 import com.example.android.meditationhub.model.MeditationLocalViewModel;
 import com.example.android.meditationhub.util.EntryExecutor;
-import com.example.android.meditationhub.util.MeditationRV;
+import com.example.android.meditationhub.util.MeditationAdapter;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
@@ -42,10 +43,9 @@ public class MainActivity extends AppCompatActivity {
     private MeditationLocalDb meditationLocalDb;
     private DatabaseReference refMeditation;
 
-    private MeditationRV medRv;
+    private MeditationAdapter medAdapter;
 
     private ActivityMainBinding mainBinding;
-    private List<MeditationFireBase> meditationsFb = new ArrayList<>();
     List<String> keys = new ArrayList<>();
 
     @Override
@@ -53,10 +53,12 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         mainBinding = DataBindingUtil.setContentView(this, R.layout.activity_main);
 
+        if(BuildConfig.DEBUG) {
+            Timber.plant(new Timber.DebugTree());
+        }
+
         firebaseDb = FirebaseDatabase.getInstance();
-        firebaseDb.setPersistenceEnabled(true);
         refMeditation = firebaseDb.getReference("meditations");
-        refMeditation.keepSynced(true);
 
         meditationLocalDb = MeditationLocalDb.getInstance(this);
 
@@ -65,12 +67,10 @@ public class MainActivity extends AppCompatActivity {
         refMeditation.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                meditationsFb.clear();
 
                 for (DataSnapshot keyNodes : dataSnapshot.getChildren()) {
                     keys.add(keyNodes.getKey());
                     MeditationFireBase meditation = keyNodes.getValue(MeditationFireBase.class);
-                    meditationsFb.add(meditation);
                     assert meditation != null;
                     addToLocalDb(meditation, keyNodes.getKey());
                     Log.v(getClass().getSimpleName(), "meditation added");
@@ -92,9 +92,9 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onChanged(@Nullable List<MeditationLocal> meditationLocals) {
                 Timber.d("Updating entries from LiveData in ViewModel");
-                medRv = new MeditationRV(MainActivity.this, meditationLocals, keys);
+                medAdapter = new MeditationAdapter(MainActivity.this, mAuth, meditationLocals, keys);
                 mainBinding.meditationListRv.setLayoutManager(new LinearLayoutManager(MainActivity.this));
-                mainBinding.meditationListRv.setAdapter(medRv);
+                mainBinding.meditationListRv.setAdapter(medAdapter);
             }
         });
     }
@@ -110,7 +110,7 @@ public class MainActivity extends AppCompatActivity {
         EntryExecutor.getInstance().diskIO().execute(new Runnable() {
             @Override
             public void run() {
-
+                //upsert functionality: https://stackoverflow.com/a/48641762/7601437
                 long id = meditationLocalDb.meditationLocalDao().createEntry(receivedMeditation);
                     if (id == -1) {
                         meditationLocalDb.meditationLocalDao().updateEntry(receivedMeditation);
@@ -157,7 +157,7 @@ public class MainActivity extends AppCompatActivity {
             case R.id.logout_menu:
                 mAuth.signOut();
                 invalidateOptionsMenu();
-                MeditationRV.logout();
+                MeditationAdapter.logout();
                 return true;
         }
         return super.onOptionsItemSelected(item);

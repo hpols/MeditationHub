@@ -46,7 +46,7 @@ public class MeditationLocal {
         this.storage = storage;
     }
 
-    String getFilename() {
+    public String getFilename() {
         return filename;
     }
 
