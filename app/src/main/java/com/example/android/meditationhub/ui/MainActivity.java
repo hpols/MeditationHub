@@ -99,22 +99,23 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void addToLocalDb(MeditationFireBase meditations, String key) {
-        final MeditationLocal receivedMeditation = new MeditationLocal();
-        receivedMeditation.setTitle(meditations.getTitle());
-        receivedMeditation.setSubtitle(meditations.getSubtitle());
-        receivedMeditation.setFilename(meditations.getFilename());
-        receivedMeditation.setLocation(meditations.getLocation());
-        receivedMeditation.setId(key);
-        receivedMeditation.setStorage(null);
+    private void addToLocalDb(final MeditationFireBase meditations, final String key) {
         EntryExecutor.getInstance().diskIO().execute(new Runnable() {
             @Override
             public void run() {
-                //upsert functionality: https://stackoverflow.com/a/48641762/7601437
-                long id = meditationLocalDb.meditationLocalDao().createEntry(receivedMeditation);
-                    if (id == -1) {
-                        meditationLocalDb.meditationLocalDao().updateEntry(receivedMeditation);
-                    }
+                String receivedMeditationFilename = meditations.getFilename();
+                MeditationLocal storedMeditation = meditationLocalDb.meditationLocalDao().getMeditation(receivedMeditationFilename);
+                if (storedMeditation == null) {
+                    final MeditationLocal receivedMeditation = new MeditationLocal();
+                    receivedMeditation.setTitle(meditations.getTitle());
+                    receivedMeditation.setSubtitle(meditations.getSubtitle());
+                    receivedMeditation.setFilename(meditations.getFilename());
+                    receivedMeditation.setLocation(meditations.getLocation());
+                    receivedMeditation.setId(key);
+                    receivedMeditation.setStorage(null);
+
+                    long id = meditationLocalDb.meditationLocalDao().createEntry(receivedMeditation);
+                }
             }
         });
     }

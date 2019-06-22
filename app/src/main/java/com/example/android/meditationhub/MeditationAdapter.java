@@ -152,7 +152,7 @@ public class MeditationAdapter extends RecyclerView.Adapter<MeditationAdapter.Me
 
         byte[] data = mmr.getEmbeddedPicture();
 
-        if (data != null) {
+        if (data.length != 0) {
             Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
             thumbIv.setImageBitmap(bitmap); //associated cover art in bitmap
         } else {
