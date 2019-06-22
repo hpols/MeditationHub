@@ -25,36 +25,49 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@+id/title_tv" />
 
+    <ImageView
+        android:id="@+id/thumb_iv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/margin_std"
+        android:layout_marginLeft="@dimen/margin_std"
+        android:contentDescription="@string/thumb_contDescrip"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@+id/subtitle_tv"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/title_tv"
+        app:srcCompat="@mipmap/ic_launcher_round" />
+
     <TextView
         android:id="@+id/title_tv"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:layout_marginLeft="8dp"
-        android:layout_marginTop="8dp"
+        android:layout_margin="@dimen/margin_std"
         android:textSize="24sp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintEnd_toStartOf="@+id/action_ib"
+        app:layout_constraintStart_toEndOf="@+id/thumb_iv"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="Title of the Meditation" />
 
     <TextView
         android:id="@+id/subtitle_tv"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:layout_marginLeft="8dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="8dp"
+        android:layout_marginTop="@dimen/margin_std"
+        android:layout_marginBottom="@dimen/margin_std"
         android:textStyle="italic"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/title_tv" />
+        app:layout_constraintEnd_toEndOf="@+id/title_tv"
+        app:layout_constraintStart_toStartOf="@+id/title_tv"
+        app:layout_constraintTop_toBottomOf="@+id/title_tv"
+        tools:text="Subtitle of the Meditation" />
 
     <ImageButton
         android:id="@+id/action_ib"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp"
-        android:layout_marginRight="8dp"
+        android:layout_marginEnd="@dimen/margin_std"
+        android:layout_marginRight="@dimen/margin_std"
         android:contentDescription="@string/ContDescrip_download_meditation"
         app:layout_constraintBottom_toBottomOf="@+id/subtitle_tv"
         app:layout_constraintEnd_toEndOf="parent"

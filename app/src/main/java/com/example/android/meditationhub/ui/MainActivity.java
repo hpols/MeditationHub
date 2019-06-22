@@ -22,7 +22,7 @@ import com.example.android.meditationhub.model.MeditationLocal;
 import com.example.android.meditationhub.model.MeditationLocalDb;
 import com.example.android.meditationhub.model.MeditationLocalViewModel;
 import com.example.android.meditationhub.util.EntryExecutor;
-import com.example.android.meditationhub.util.MeditationAdapter;
+import com.example.android.meditationhub.MeditationAdapter;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
@@ -92,7 +92,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onChanged(@Nullable List<MeditationLocal> meditationLocals) {
                 Timber.d("Updating entries from LiveData in ViewModel");
-                medAdapter = new MeditationAdapter(MainActivity.this, mAuth, meditationLocals, keys);
+                medAdapter = new MeditationAdapter(MainActivity.this, mAuth, meditationLocals);
                 mainBinding.meditationListRv.setLayoutManager(new LinearLayoutManager(MainActivity.this));
                 mainBinding.meditationListRv.setAdapter(medAdapter);
             }
@@ -159,7 +159,22 @@ public class MainActivity extends AppCompatActivity {
                 invalidateOptionsMenu();
                 MeditationAdapter.logout();
                 return true;
+            case R.id.uri_add:
+                addUri();
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void addUri() {
+        EntryExecutor.getInstance().diskIO().execute(new Runnable() {
+            @Override
+            public void run() {
+                MeditationLocal selectedMed = meditationLocalDb.meditationLocalDao().getMeditation("WalkingMed4.mp3");
+                selectedMed.setStorage("/sdcard/Android/data/com.example.android.meditationhub/files/mnt/sdcard/MeditationHub/WalkingMed4.mp3");
+                meditationLocalDb.meditationLocalDao().updateEntry(selectedMed);
+                Timber.v("Updated meditation: " + selectedMed.toString());
+            }
+        });
+        medAdapter.notifyDataSetChanged();
     }
 }

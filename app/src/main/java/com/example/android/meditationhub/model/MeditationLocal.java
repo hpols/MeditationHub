@@ -4,10 +4,12 @@ import android.arch.persistence.room.ColumnInfo;
 import android.arch.persistence.room.Entity;
 import android.arch.persistence.room.Ignore;
 import android.arch.persistence.room.PrimaryKey;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.support.annotation.NonNull;
 
 @Entity(tableName = "meditations")
-public class MeditationLocal {
+public class MeditationLocal implements Parcelable {
 
     private static final String ID = "id";
     private static final String FILENAME = "filename";
@@ -98,5 +100,57 @@ public class MeditationLocal {
     public MeditationLocal setStorage(String storage) {
         this.storage = storage;
         return this;
+    }
+
+    @Override
+    public String toString() {
+        return "MeditationLocal{" +
+                "id='" + id + '\'' +
+                ", filename='" + filename + '\'' +
+                ", location='" + location + '\'' +
+                ", subtitle='" + subtitle + '\'' +
+                ", title='" + title + '\'' +
+                ", storage='" + storage + '\'' +
+                '}';
+    }
+
+    /** Parcable Functionality **/
+
+    public static final Creator<MeditationLocal> CREATOR = new Creator<MeditationLocal>() {
+        @Override
+        public MeditationLocal createFromParcel(Parcel in) {
+            return new MeditationLocal(in);
+        }
+
+        @Override
+        public MeditationLocal[] newArray(int size) {
+            return new MeditationLocal[size];
+        }
+    };
+
+
+    private MeditationLocal(Parcel in) {
+        id = in.readString();
+        filename = in.readString();
+        location = in.readString();
+        subtitle = in.readString();
+        title = in.readString();
+        storage = in.readString();
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeString(id);
+        dest.writeString(filename);
+        dest.writeString(location);
+        dest.writeString(title);
+        dest.writeString(subtitle);
+        dest.writeString(storage);
+
     }
 }

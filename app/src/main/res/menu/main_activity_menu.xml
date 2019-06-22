@@ -8,4 +8,7 @@
     <item
         android:id="@+id/logout_menu"
         android:title="Logout" />
+    <item
+        android:id="@+id/uri_add"
+        android:title="Update WalkMed4"/>
 </menu>

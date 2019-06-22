@@ -23,6 +23,9 @@ public interface MeditationLocalDao {
     @Query("SELECT * FROM meditations")
     LiveData<List<MeditationLocal>> getAllEntries();
 
+    @Query("SELECT * FROM meditations WHERE filename LIKE :filename")
+    MeditationLocal getMeditation(String filename);
+
 
     //––– UPDATE Methods –––//
 

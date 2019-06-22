@@ -53,6 +53,8 @@ dependencies {
     testImplementation "android.arch.persistence.room:testing:$aac_version"
 
     implementation 'com.nabinbhandari.android:permissions:3.8' //Android Permissions
+
+    implementation 'com.google.android.exoplayer:exoplayer:2.7.1' //Mediaplayer
 }
 
 apply plugin: 'com.google.gms.google-services' //firebase

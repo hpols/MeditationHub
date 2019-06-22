@@ -1,9 +1,13 @@
-package com.example.android.meditationhub.util;
+package com.example.android.meditationhub;
 
 import android.Manifest;
 import android.app.DownloadManager;
 import android.content.Context;
+import android.content.Intent;
 import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.Environment;
 import android.os.Handler;
@@ -15,12 +19,15 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.example.android.meditationhub.R;
 import com.example.android.meditationhub.model.MeditationLocal;
 import com.example.android.meditationhub.model.MeditationLocalDb;
+import com.example.android.meditationhub.ui.PlayerActivity;
+import com.example.android.meditationhub.util.Constants;
+import com.example.android.meditationhub.util.EntryExecutor;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.auth.FirebaseAuth;
@@ -40,7 +47,7 @@ import timber.log.Timber;
 
 /**
  * The {@link MeditationAdapter} ensures that the {@link RecyclerView} can display all information,
- * updating itself after any changes
+ * updating itself after any changes.
  */
 public class MeditationAdapter extends RecyclerView.Adapter<MeditationAdapter.MeditationVH> {
 
@@ -48,15 +55,12 @@ public class MeditationAdapter extends RecyclerView.Adapter<MeditationAdapter.Me
     private static FirebaseUser user;
 
     private List<MeditationLocal> meditations;
-    private List<String> keys;
 
     private MeditationLocalDb meditationLocalDb;
 
-    public MeditationAdapter(Context ctxt, FirebaseAuth mAuth, List<MeditationLocal> meditations,
-                             List<String> keys) {
+    public MeditationAdapter(Context ctxt, FirebaseAuth mAuth, List<MeditationLocal> meditations) {
         this.ctxt = ctxt;
         this.meditations = meditations;
-        this.keys = keys;
 
         user = mAuth.getCurrentUser();
         meditationLocalDb = MeditationLocalDb.getInstance(ctxt);
@@ -64,27 +68,32 @@ public class MeditationAdapter extends RecyclerView.Adapter<MeditationAdapter.Me
 
     @NonNull
     @Override
-    public MeditationVH onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
+    public MeditationVH onCreateViewHolder(@NonNull ViewGroup viewGroup, int viewType) {
+
         View root = LayoutInflater.from(ctxt).inflate(R.layout.meditation_item, viewGroup,
                 false);
+
         root.setFocusable(true);
 
         return new MeditationVH(root);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull final MeditationVH medVh, int i) {
-        final MeditationLocal thisMed = meditations.get(i);
+    public void onBindViewHolder(@NonNull final MeditationVH medVh, int position) {
+        final MeditationLocal thisMed = meditations.get(position);
+        Timber.d("this meditation = " + thisMed.toString());
 
         medVh.titleTv.setText(thisMed.getTitle());
         medVh.subtitleTv.setText(thisMed.getSubtitle());
 
-        //set Action image
+        //set Action image and its responses to clicks
         int actionImage;
         if (thisMed.getStorage() == null) {
             actionImage = android.R.drawable.stat_sys_download;
         } else {
             actionImage = android.R.drawable.ic_media_play;
+            medVh.thumbIv.setVisibility(View.VISIBLE);
+            setCoverArt(medVh.thumbIv, thisMed);
         }
         medVh.actionIb.setImageResource(actionImage);
 
@@ -104,17 +113,58 @@ public class MeditationAdapter extends RecyclerView.Adapter<MeditationAdapter.Me
 
                     } else {
                         //start mediaplayer
+                        goToPlayer(thisMed, Constants.AUTO_PLAY);
                     }
                 }
             }
         });
+        medVh.itemView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                goToPlayer(thisMed, Constants.JUST_OPEN);
+            }
+        });
+    }
+
+    private void goToPlayer(MeditationLocal thisMed, int action) {
+        Intent openPlayer = new Intent(ctxt, PlayerActivity.class);
+        openPlayer.putExtra(Constants.THIS_MED, thisMed);
+        openPlayer.putExtra(Constants.ACTION, action);
+        ctxt.startActivity(openPlayer);
+    }
+
+    @Override
+    public int getItemCount() {
+        return meditations.size();
+    }
+
+    /**
+     * display the cover art of the meditation (as available)
+     * see: //https://stackoverflow.com/a/21549403/7601437
+     *
+     * @param thumbIv is the view in which it will be displayed
+     * @param thisMed is the meditation in question
+     */
+    private void setCoverArt(ImageView thumbIv, MeditationLocal thisMed) {
+
+        MediaMetadataRetriever mmr = new MediaMetadataRetriever();
+        mmr.setDataSource(thisMed.getStorage());
+
+        byte[] data = mmr.getEmbeddedPicture();
+
+        if (data != null) {
+            Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
+            thumbIv.setImageBitmap(bitmap); //associated cover art in bitmap
+        } else {
+            thumbIv.setImageResource(R.mipmap.ic_launcher); //any default cover resource folder
+        }
     }
 
     /**
      * download the Meditation to the App-own folder in the External(??) Storage
      *
      * @param thisMed is the current Meditation being downloaded
-     * @param medVh             viewholder to pass on to the download manager > updates
+     * @param medVh   viewholder to pass on to the download manager > updates
      */
     private void downloadFile(final MeditationLocal thisMed, final MeditationVH medVh) {
         //ensure permissions are granted. If not ask user to grant them.
@@ -124,7 +174,7 @@ public class MeditationAdapter extends RecyclerView.Adapter<MeditationAdapter.Me
                 // Create a storage reference from our app
                 StorageReference ref = FirebaseStorage.getInstance().getReference().child(thisMed.getFilename());
 
-                final File rootPath = new File(Environment.getExternalStorageDirectory(), "MeditationHub");
+                final File rootPath = new File(Environment.getExternalStorageDirectory(), Constants.FOLDER);
                 if (!rootPath.exists()) {
                     rootPath.mkdirs();
                 }
@@ -161,10 +211,10 @@ public class MeditationAdapter extends RecyclerView.Adapter<MeditationAdapter.Me
     /**
      * setup the download manager
      *
-     * @param uri               the location on Firebase of the file
-     * @param rootPath          where the file will be stored on the device
-     * @param thisMed is the Meditation being downloaded
-     * @param medVh             is the viewholder to be passed on for the Ui updating
+     * @param uri      the location on Firebase of the file
+     * @param rootPath where the file will be stored on the device
+     * @param thisMed  is the Meditation being downloaded
+     * @param medVh    is the viewholder to be passed on for the Ui updating
      */
     private void downloader(Uri uri, File rootPath, MeditationLocal thisMed, final MeditationVH medVh) {
         final DownloadManager dlManager = (DownloadManager)
@@ -181,11 +231,11 @@ public class MeditationAdapter extends RecyclerView.Adapter<MeditationAdapter.Me
      * Keep the user updated on the status of the download on screen.
      * See also: https://stackoverflow.com/questions/15795872/show-download-progress-inside-activity-using-downloadmanager
      *
-     * @param medVh             is the viewholder so as to access the progressbar displaying the
-     *                          progress of the download in realtime.
-     * @param dlManager         the Manager handling the download
-     * @param dlId              the id of the download currently being handled.
-     * @param thisMed is the Meditation being downloadedr
+     * @param medVh     is the viewholder so as to access the progressbar displaying the
+     *                  progress of the download in realtime.
+     * @param dlManager the Manager handling the download
+     * @param dlId      the id of the download currently being handled.
+     * @param thisMed   is the Meditation being downloadedr
      */
     private void updateProgressToUi(final MeditationVH medVh, final DownloadManager dlManager,
                                     final long dlId, final MeditationLocal thisMed) {
@@ -271,11 +321,6 @@ public class MeditationAdapter extends RecyclerView.Adapter<MeditationAdapter.Me
         }).start();
     }
 
-    @Override
-    public int getItemCount() {
-        return meditations.size();
-    }
-
     public static void logout() {
         user = null;
     }
@@ -292,8 +337,8 @@ public class MeditationAdapter extends RecyclerView.Adapter<MeditationAdapter.Me
         View progressBgV;
         @BindView(R.id.progress_guide)
         Guideline progressGuide;
-
-        private String key;
+        @BindView(R.id.thumb_iv)
+        ImageView thumbIv;
 
         MeditationVH(View view) {
             super(view);
