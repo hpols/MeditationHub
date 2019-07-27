@@ -1,19 +1,15 @@
 package com.example.android.meditationhub;
 
 import android.Manifest;
-import android.app.DownloadManager;
 import android.content.Context;
 import android.content.Intent;
-import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.Environment;
-import android.os.Handler;
-import android.os.Looper;
 import android.support.annotation.NonNull;
-import android.support.constraint.Guideline;
+import android.support.v4.content.FileProvider;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -27,7 +23,7 @@ import com.example.android.meditationhub.model.MeditationLocal;
 import com.example.android.meditationhub.model.MeditationLocalDb;
 import com.example.android.meditationhub.ui.PlayerActivity;
 import com.example.android.meditationhub.util.Constants;
-import com.example.android.meditationhub.util.EntryExecutor;
+import com.example.android.meditationhub.util.MedUtils;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.auth.FirebaseAuth;
@@ -58,9 +54,18 @@ public class MeditationAdapter extends RecyclerView.Adapter<MeditationAdapter.Me
 
     private MeditationLocalDb meditationLocalDb;
 
-    public MeditationAdapter(Context ctxt, FirebaseAuth mAuth, List<MeditationLocal> meditations) {
+    //alert the MainActivity of download related information
+    private final AdapterInterface adapterInterface;
+
+    public interface AdapterInterface {
+        void download(Uri uri, MeditationLocal filename, int medPos);
+    }
+
+    public MeditationAdapter(Context ctxt, FirebaseAuth mAuth, List<MeditationLocal> meditations,
+                             AdapterInterface adapterInterface) {
         this.ctxt = ctxt;
         this.meditations = meditations;
+        this.adapterInterface = adapterInterface;
 
         user = mAuth.getCurrentUser();
         meditationLocalDb = MeditationLocalDb.getInstance(ctxt);
@@ -80,40 +85,78 @@ public class MeditationAdapter extends RecyclerView.Adapter<MeditationAdapter.Me
 
     @Override
     public void onBindViewHolder(@NonNull final MeditationVH medVh, int position) {
-        final MeditationLocal thisMed = meditations.get(position);
-        Timber.d("this meditation = " + thisMed.toString());
+        final int medPos = position;
+        final MeditationLocal selectedMed = meditations.get(position);
+        Timber.d("this meditation = " + selectedMed.toString());
 
-        medVh.titleTv.setText(thisMed.getTitle());
-        medVh.subtitleTv.setText(thisMed.getSubtitle());
+        medVh.titleTv.setText(selectedMed.getTitle());
+        medVh.subtitleTv.setText(selectedMed.getSubtitle());
 
         //set Action image and its responses to clicks
         int actionImage;
-        if (thisMed.getStorage() == null) {
+        if (selectedMed.getStorage() == null) {
             actionImage = android.R.drawable.stat_sys_download;
         } else {
             actionImage = android.R.drawable.ic_media_play;
             medVh.thumbIv.setVisibility(View.VISIBLE);
-            setCoverArt(medVh.thumbIv, thisMed);
+            medVh.coverArt = getCoverArt(selectedMed);
+            MedUtils.displayCoverArt(medVh.coverArt, medVh.thumbIv);
         }
         medVh.actionIb.setImageResource(actionImage);
 
         medVh.actionIb.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Timber.v("button clicked in recyclerview");
+                Timber.v("button clicked in recyclerView");
                 if (user == null) {
                     Toast.makeText(ctxt, "Please login to use this feature",
                             Toast.LENGTH_SHORT).show();
                 } else {
-                    if (thisMed.getStorage() == null) {
+                    if (selectedMed.getStorage() == null) {
                         Timber.v("downloaded started");
                         //download file
-                        downloadFile(thisMed, medVh);
-                        medVh.progressBgV.setVisibility(View.VISIBLE);
+                        Permissions.check(ctxt, Manifest.permission.WRITE_EXTERNAL_STORAGE, 
+                                null, new PermissionHandler() {
+                            @Override
+                            public void onGranted() {
+                                // Create a storage reference from our app
+                                StorageReference ref = FirebaseStorage.getInstance().getReference()
+                                        .child(selectedMed.getFilename());
+
+                                ref.getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
+                                    @Override
+                                    public void onSuccess(Uri uri) {
+                                        adapterInterface.download(uri, selectedMed, medPos);
+                                    }
+                                }).addOnFailureListener(new OnFailureListener() {
+                                    @Override
+                                    public void onFailure(@NonNull Exception exception) {
+                                        Timber.e(ctxt.getString(R.string.download_error)
+                                                + exception.toString());
+                                        Toast.makeText(ctxt, ctxt.getString(R.string.download_error),
+                                                Toast.LENGTH_LONG).show();
+                                    }
+                                });
+                            }
+
+                            @Override
+                            public void onDenied(Context context, ArrayList<String> deniedPermissions) {
+                                super.onDenied(context, deniedPermissions);
+                                Toast.makeText(ctxt, ctxt.getString(R.string.download_denied),
+                                        Toast.LENGTH_LONG).show();
+                            }
+
+                            @Override
+                            public boolean onBlocked(Context context, ArrayList<String> blockedList) {
+                                Toast.makeText(ctxt, ctxt.getString(R.string.download_blocked),
+                                        Toast.LENGTH_LONG).show();
+                                return super.onBlocked(context, blockedList);
+                            }
+                        });
 
                     } else {
-                        //start mediaplayer
-                        goToPlayer(thisMed, Constants.AUTO_PLAY);
+                        //start mediaPlayer
+                        goToPlayer(selectedMed, medVh.coverArt, Constants.AUTO_PLAY);
                     }
                 }
             }
@@ -121,15 +164,16 @@ public class MeditationAdapter extends RecyclerView.Adapter<MeditationAdapter.Me
         medVh.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                goToPlayer(thisMed, Constants.JUST_OPEN);
+                goToPlayer(selectedMed, medVh.coverArt, Constants.JUST_OPEN);
             }
         });
     }
 
-    private void goToPlayer(MeditationLocal thisMed, int action) {
+    private void goToPlayer(MeditationLocal thisMed, Bitmap coverArt, int action) {
         Intent openPlayer = new Intent(ctxt, PlayerActivity.class);
         openPlayer.putExtra(Constants.THIS_MED, thisMed);
         openPlayer.putExtra(Constants.ACTION, action);
+        openPlayer.putExtra(Constants.ART, coverArt);
         ctxt.startActivity(openPlayer);
     }
 
@@ -139,186 +183,27 @@ public class MeditationAdapter extends RecyclerView.Adapter<MeditationAdapter.Me
     }
 
     /**
-     * display the cover art of the meditation (as available)
+     * get the cover art of the meditation (as available)
      * see: //https://stackoverflow.com/a/21549403/7601437
      *
-     * @param thumbIv is the view in which it will be displayed
-     * @param thisMed is the meditation in question
+     * @param selectedMed is the meditation in question
      */
-    private void setCoverArt(ImageView thumbIv, MeditationLocal thisMed) {
+    private Bitmap getCoverArt(MeditationLocal selectedMed) {
+        File medPath = new File(Environment.getExternalStorageDirectory(), ctxt.getString(R.string.app_name));
+        File medFile = new File(medPath, selectedMed.getFilename());
+        Uri medUri = FileProvider.getUriForFile(ctxt, ctxt.getApplicationContext().getPackageName() + ".file_provider", medFile);
+        ctxt.grantUriPermission(ctxt.getApplicationContext().getPackageName(), medUri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
         MediaMetadataRetriever mmr = new MediaMetadataRetriever();
-        mmr.setDataSource(thisMed.getStorage());
+        mmr.setDataSource(ctxt, medUri);
 
         byte[] data = mmr.getEmbeddedPicture();
 
         if (data.length != 0) {
-            Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
-            thumbIv.setImageBitmap(bitmap); //associated cover art in bitmap
+            return BitmapFactory.decodeByteArray(data, 0, data.length);
         } else {
-            thumbIv.setImageResource(R.mipmap.ic_launcher); //any default cover resource folder
+            return null;
         }
-    }
-
-    /**
-     * download the Meditation to the App-own folder in the External(??) Storage
-     *
-     * @param thisMed is the current Meditation being downloaded
-     * @param medVh   viewholder to pass on to the download manager > updates
-     */
-    private void downloadFile(final MeditationLocal thisMed, final MeditationVH medVh) {
-        //ensure permissions are granted. If not ask user to grant them.
-        Permissions.check(ctxt, Manifest.permission.WRITE_EXTERNAL_STORAGE, null, new PermissionHandler() {
-            @Override
-            public void onGranted() {
-                // Create a storage reference from our app
-                StorageReference ref = FirebaseStorage.getInstance().getReference().child(thisMed.getFilename());
-
-                final File rootPath = new File(Environment.getExternalStorageDirectory(), Constants.FOLDER);
-                if (!rootPath.exists()) {
-                    rootPath.mkdirs();
-                }
-                ref.getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
-                    @Override
-                    public void onSuccess(Uri uri) {
-                        downloader(uri, rootPath, thisMed, medVh);
-                    }
-                }).addOnFailureListener(new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull Exception exception) {
-                        Timber.e("The file could not be retrieved: "
-                                + exception.toString());
-                        Toast.makeText(ctxt, "An error occurred creating the file",
-                                Toast.LENGTH_LONG).show();
-                    }
-                });
-            }
-
-            @Override
-            public void onDenied(Context context, ArrayList<String> deniedPermissions) {
-                super.onDenied(context, deniedPermissions);
-                Toast.makeText(ctxt, ctxt.getString(R.string.download_denied), Toast.LENGTH_LONG).show();
-            }
-
-            @Override
-            public boolean onBlocked(Context context, ArrayList<String> blockedList) {
-                Toast.makeText(ctxt, ctxt.getString(R.string.download_blocked), Toast.LENGTH_LONG).show();
-                return super.onBlocked(context, blockedList);
-            }
-        });
-    }
-
-    /**
-     * setup the download manager
-     *
-     * @param uri      the location on Firebase of the file
-     * @param rootPath where the file will be stored on the device
-     * @param thisMed  is the Meditation being downloaded
-     * @param medVh    is the viewholder to be passed on for the Ui updating
-     */
-    private void downloader(Uri uri, File rootPath, MeditationLocal thisMed, final MeditationVH medVh) {
-        final DownloadManager dlManager = (DownloadManager)
-                ctxt.getSystemService(Context.DOWNLOAD_SERVICE);
-        final DownloadManager.Request dlRequest = new DownloadManager.Request(uri);
-        dlRequest.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE);
-        dlRequest.setDestinationInExternalFilesDir(ctxt, String.valueOf(rootPath), thisMed.getFilename());
-        final long dlId = dlManager.enqueue(dlRequest);
-
-        updateProgressToUi(medVh, dlManager, dlId, thisMed);
-    }
-
-    /**
-     * Keep the user updated on the status of the download on screen.
-     * See also: https://stackoverflow.com/questions/15795872/show-download-progress-inside-activity-using-downloadmanager
-     *
-     * @param medVh     is the viewholder so as to access the progressbar displaying the
-     *                  progress of the download in realtime.
-     * @param dlManager the Manager handling the download
-     * @param dlId      the id of the download currently being handled.
-     * @param thisMed   is the Meditation being downloadedr
-     */
-    private void updateProgressToUi(final MeditationVH medVh, final DownloadManager dlManager,
-                                    final long dlId, final MeditationLocal thisMed) {
-
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                boolean downloading = true;
-                while (downloading) {
-
-                    DownloadManager.Query dlQuery = new DownloadManager.Query();
-                    dlQuery.setFilterById(dlId);
-
-                    Cursor csr = dlManager.query(dlQuery);
-                    csr.moveToFirst();
-
-                    final int bytesTotal = csr.getInt(csr.getColumnIndex(DownloadManager
-                            .COLUMN_TOTAL_SIZE_BYTES));
-
-                    if (csr.getInt(csr.getColumnIndex(DownloadManager.COLUMN_STATUS))
-                            == DownloadManager.STATUS_SUCCESSFUL) {
-                        downloading = false;
-                    }
-
-                    String msg;
-
-                    switch (csr.getInt(csr.getColumnIndex(DownloadManager.COLUMN_STATUS))) {
-                        case DownloadManager.STATUS_FAILED:
-                            msg = "Download failed!";
-                            break;
-
-                        case DownloadManager.STATUS_PAUSED:
-                            msg = "Download paused!";
-                            break;
-
-                        case DownloadManager.STATUS_PENDING:
-                            msg = "Download pending!";
-                            break;
-
-                        case DownloadManager.STATUS_RUNNING:
-                            msg = "Download in progress!";
-                            final int bytesLoaded = csr.getInt(csr
-                                    .getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR));
-                            if (bytesLoaded != 0) {
-                                final int dlProgress = (int) ((bytesLoaded * 100L) / bytesTotal);
-
-                                new Handler(Looper.getMainLooper()).post(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        medVh.progressGuide.setGuidelinePercent((float) dlProgress / 100L);
-                                        Timber.v("Progress: downloaded: " + bytesLoaded +
-                                                " from total: " + bytesTotal + "=" + dlProgress);
-
-                                        //TODO: continue working on UI display in July.
-                                    }
-                                });
-                            }
-                            break;
-
-                        case DownloadManager.STATUS_SUCCESSFUL:
-                            msg = "Download complete!";
-                            final Uri location = dlManager.getUriForDownloadedFile(dlId);
-                            EntryExecutor.getInstance().diskIO().execute(new Runnable() {
-                                @Override
-                                public void run() {
-                                    thisMed.setStorage(String.valueOf(location));
-                                    meditationLocalDb.meditationLocalDao().updateEntry(thisMed);
-                                }
-                            });
-
-                            notifyDataSetChanged();
-                            break;
-
-                        default:
-                            msg = "Download is nowhere in sight";
-                            break;
-                    }
-
-                    Timber.d(msg);
-                    csr.close();
-                }
-            }
-        }).start();
     }
 
     public static void logout() {
@@ -333,12 +218,10 @@ public class MeditationAdapter extends RecyclerView.Adapter<MeditationAdapter.Me
         TextView subtitleTv;
         @BindView(R.id.action_ib)
         ImageButton actionIb;
-        @BindView(R.id.progress_bg_v)
-        View progressBgV;
-        @BindView(R.id.progress_guide)
-        Guideline progressGuide;
         @BindView(R.id.thumb_iv)
         ImageView thumbIv;
+
+        Bitmap coverArt = null;
 
         MeditationVH(View view) {
             super(view);
