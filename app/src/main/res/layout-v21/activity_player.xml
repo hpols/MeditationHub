@@ -6,13 +6,15 @@
     <android.support.constraint.ConstraintLayout
         android:id="@+id/media_holder"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:background="@color/colorPrimaryDark">
 
         <ImageView
             android:id="@+id/thumb_iv"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:adjustViewBounds="true"
+            android:transitionName="@string/med_image_transition"
             android:contentDescription="@string/thumb_contDescrip"
             android:scaleType="fitCenter"
             android:fadingEdge="horizontal|vertical"
@@ -21,13 +23,14 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:srcCompat="@mipmap/ic_launcher_round" />
+            app:srcCompat="@drawable/ic_meditation_hub" />
 
         <TextView
             android:id="@+id/title_tv"
             style="@style/text"
             android:textSize="24sp"
             app:layout_constraintBottom_toTopOf="@+id/subtitle_tv"
+            android:transitionName="@string/med_title_transition"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             tools:text="Title of the Meditation" />
@@ -37,6 +40,7 @@
             style="@style/text"
             android:textStyle="italic"
             android:textSize="20sp"
+            android:transitionName="@string/med_subtitle_transition"
             app:layout_constraintBottom_toTopOf="@+id/progress_sb"
             app:layout_constraintEnd_toEndOf="@+id/title_tv"
             app:layout_constraintStart_toStartOf="@+id/title_tv"

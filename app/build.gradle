@@ -5,6 +5,7 @@ android {
     defaultConfig {
         applicationId "com.example.android.meditationhub"
         minSdkVersion 16
+        vectorDrawables.useSupportLibrary = true
         targetSdkVersion 28
         versionCode 1
         versionName "1.0"

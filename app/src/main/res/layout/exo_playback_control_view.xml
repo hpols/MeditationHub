@@ -44,7 +44,7 @@
         tools:text="Subtitle of the Meditation" />
 
     <ImageButton
-        android:id="@id/exo_play"
+        android:id="@id/play_bt"
         style="@style/ExoMediaButton.Play"
         android:layout_width="wrap_content"
         android:layout_height="50dp"
@@ -67,7 +67,7 @@
         android:contentDescription="@string/pause_button_contDescrip"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="@+id/exo_progress"
-        app:layout_constraintStart_toEndOf="@+id/exo_play" />
+        app:layout_constraintStart_toEndOf="@+id/play_bt" />
 
     <TextView
         android:id="@id/exo_position"
@@ -92,7 +92,7 @@
         android:layout_margin="@dimen/margin_std"
         android:layout_weight="1"
         android:focusable="false"
-        app:layout_constraintBottom_toTopOf="@+id/exo_play"
+        app:layout_constraintBottom_toTopOf="@+id/play_bt"
         app:layout_constraintEnd_toStartOf="@+id/exo_duration"
         app:layout_constraintStart_toEndOf="@+id/exo_position" />
 

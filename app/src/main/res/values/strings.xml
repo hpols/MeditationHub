@@ -7,4 +7,8 @@
     <string name="play_button_contDescrip">play button</string>
     <string name="pause_button_contDescrip">pause button</string>
     <string name="download_error">An error occurred downloading the file</string>
+    <string name="med_image_transition">Meditation Image</string>
+    <string name="med_title_transition">Meditation Title</string>
+    <string name="med_subtitle_transition">Meditation Subtitle</string>
+    <string name="background">background</string>
 </resources>

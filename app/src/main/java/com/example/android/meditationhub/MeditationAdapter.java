@@ -1,12 +1,15 @@
 package com.example.android.meditationhub;
 
 import android.Manifest;
+import android.app.Activity;
+import android.app.ActivityOptions;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
+import android.os.Bundle;
 import android.os.Environment;
 import android.support.annotation.NonNull;
 import android.support.v4.content.FileProvider;
@@ -99,7 +102,9 @@ public class MeditationAdapter extends RecyclerView.Adapter<MeditationAdapter.Me
         } else {
             actionImage = android.R.drawable.ic_media_play;
             medVh.thumbIv.setVisibility(View.VISIBLE);
-            medVh.coverArt = getCoverArt(selectedMed);
+            medVh.medUri =getUri(selectedMed);
+
+            medVh.coverArt = getCoverArt(medVh.medUri);
             MedUtils.displayCoverArt(medVh.coverArt, medVh.thumbIv);
         }
         medVh.actionIb.setImageResource(actionImage);
@@ -156,7 +161,7 @@ public class MeditationAdapter extends RecyclerView.Adapter<MeditationAdapter.Me
 
                     } else {
                         //start mediaPlayer
-                        goToPlayer(selectedMed, medVh.coverArt, Constants.AUTO_PLAY);
+                        goToPlayer(selectedMed, medVh.coverArt, medVh.medUri, medVh.thumbIv, Constants.AUTO_PLAY);
                     }
                 }
             }
@@ -164,17 +169,32 @@ public class MeditationAdapter extends RecyclerView.Adapter<MeditationAdapter.Me
         medVh.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                goToPlayer(selectedMed, medVh.coverArt, Constants.JUST_OPEN);
+                goToPlayer(selectedMed, medVh.coverArt, medVh.medUri, medVh.thumbIv, Constants.JUST_OPEN);
             }
         });
     }
 
-    private void goToPlayer(MeditationLocal thisMed, Bitmap coverArt, int action) {
+    private Uri getUri(MeditationLocal selectedMed) {
+        File medPath = new File(Environment.getExternalStorageDirectory(),
+                ctxt.getString(R.string.app_name));
+        File medFile = new File(medPath, selectedMed.getFilename());
+        Uri medUri = FileProvider.getUriForFile(ctxt,
+                ctxt.getApplicationContext().getPackageName() + ".file_provider", medFile);
+        ctxt.grantUriPermission(ctxt.getApplicationContext().getPackageName(), medUri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        return medUri;
+    }
+
+    private void goToPlayer(MeditationLocal selectedMed, Bitmap coverArt, Uri medUri, ImageView thumbIv, int action) {
         Intent openPlayer = new Intent(ctxt, PlayerActivity.class);
-        openPlayer.putExtra(Constants.THIS_MED, thisMed);
+        openPlayer.putExtra(Constants.SELECTED_MED, selectedMed);
         openPlayer.putExtra(Constants.ACTION, action);
         openPlayer.putExtra(Constants.ART, coverArt);
-        ctxt.startActivity(openPlayer);
+        openPlayer.putExtra(Constants.URI, medUri);
+
+        Bundle transitionBundle = ActivityOptions.makeSceneTransitionAnimation((Activity) ctxt,
+                thumbIv, thumbIv.getTransitionName()).toBundle();
+        ctxt.startActivity(openPlayer, transitionBundle);
     }
 
     @Override
@@ -186,23 +206,20 @@ public class MeditationAdapter extends RecyclerView.Adapter<MeditationAdapter.Me
      * get the cover art of the meditation (as available)
      * see: //https://stackoverflow.com/a/21549403/7601437
      *
-     * @param selectedMed is the meditation in question
+     * @param medUri is the meditation audio in question
      */
-    private Bitmap getCoverArt(MeditationLocal selectedMed) {
-        File medPath = new File(Environment.getExternalStorageDirectory(), ctxt.getString(R.string.app_name));
-        File medFile = new File(medPath, selectedMed.getFilename());
-        Uri medUri = FileProvider.getUriForFile(ctxt, ctxt.getApplicationContext().getPackageName() + ".file_provider", medFile);
-        ctxt.grantUriPermission(ctxt.getApplicationContext().getPackageName(), medUri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+    private Bitmap getCoverArt(Uri medUri) {
+
 
         MediaMetadataRetriever mmr = new MediaMetadataRetriever();
         mmr.setDataSource(ctxt, medUri);
 
         byte[] data = mmr.getEmbeddedPicture();
 
-        if (data.length != 0) {
+        if (data != null) {
             return BitmapFactory.decodeByteArray(data, 0, data.length);
         } else {
-            return null;
+            return BitmapFactory.decodeResource(ctxt.getResources(), R.drawable.ic_meditation_hub);
         }
     }
 
@@ -222,6 +239,7 @@ public class MeditationAdapter extends RecyclerView.Adapter<MeditationAdapter.Me
         ImageView thumbIv;
 
         Bitmap coverArt = null;
+        Uri medUri;
 
         MeditationVH(View view) {
             super(view);

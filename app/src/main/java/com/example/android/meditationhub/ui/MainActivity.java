@@ -76,6 +76,7 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
             @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
 
+                mainBinding.meditationListPb.setVisibility(View.VISIBLE);
                 for (DataSnapshot keyNodes : dataSnapshot.getChildren()) {
                     keys.add(keyNodes.getKey());
                     MeditationFireBase meditation = keyNodes.getValue(MeditationFireBase.class);
@@ -197,6 +198,10 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
     @Override
     public void download(Uri uri, final MeditationLocal selectedMed, final int medPos) {
 
+        //show views to track the download
+        mainBinding.downloadInfoCv.setVisibility(View.VISIBLE);
+        mainBinding.downloadMsgTv.setText("Downloading: " + selectedMed.getTitle());
+
         //set up the download manager and the file destination
         final DownloadManager dlManager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
         String destination = Environment.getExternalStorageDirectory() + "/MeditationHub";
@@ -216,10 +221,7 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
         dlRequest.setDestinationUri(destinationUri);
         final long dlId = dlManager.enqueue(dlRequest);
 
-        //track the download
         final String finalDestination = destination;
-        mainBinding.downloadInfoCl.setVisibility(View.VISIBLE);
-        mainBinding.downloadMsgTv.setText("Downloading: " + selectedMed.getTitle());
 
         new Thread(new Runnable() {
             @Override
@@ -305,7 +307,8 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
             }
         }).start();
 
+        //whether successful or not, hide views again
         medAdapter.notifyItemChanged(medPos);
-        mainBinding.downloadInfoCl.setVisibility(View.GONE);
+        mainBinding.downloadInfoCv.setVisibility(View.GONE);
     }
 }

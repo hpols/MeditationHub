@@ -4,122 +4,80 @@ import android.databinding.DataBindingUtil;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
+import android.view.View;
+import android.widget.SeekBar;
 
+import com.example.android.meditationhub.BuildConfig;
+import com.example.android.meditationhub.NotificationPanel;
 import com.example.android.meditationhub.R;
 import com.example.android.meditationhub.databinding.ActivityPlayerBinding;
 import com.example.android.meditationhub.model.MeditationLocal;
+import com.example.android.meditationhub.player.MediaPlayerHolder;
+import com.example.android.meditationhub.player.PlaybackInfoListener;
+import com.example.android.meditationhub.player.PlayerAdapter;
 import com.example.android.meditationhub.util.Constants;
 import com.example.android.meditationhub.util.MedUtils;
-import com.google.android.exoplayer2.C;
-import com.google.android.exoplayer2.ExoPlaybackException;
-import com.google.android.exoplayer2.ExoPlayerFactory;
-import com.google.android.exoplayer2.PlaybackParameters;
-import com.google.android.exoplayer2.Player;
-import com.google.android.exoplayer2.SimpleExoPlayer;
-import com.google.android.exoplayer2.Timeline;
-import com.google.android.exoplayer2.source.ExtractorMediaSource;
-import com.google.android.exoplayer2.source.MediaSource;
-import com.google.android.exoplayer2.source.TrackGroupArray;
-import com.google.android.exoplayer2.trackselection.AdaptiveTrackSelection;
-import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
-import com.google.android.exoplayer2.trackselection.TrackSelectionArray;
-import com.google.android.exoplayer2.ui.PlayerView;
-import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter;
-import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
-import com.google.android.exoplayer2.util.Util;
 
-import butterknife.BindView;
+import java.util.concurrent.TimeUnit;
 
-public class PlayerActivity extends AppCompatActivity implements Player.EventListener {
+import timber.log.Timber;
 
+public class PlayerActivity extends AppCompatActivity {
+
+    public static boolean displayHours;
     private ActivityPlayerBinding playerBinding;
-    private MeditationLocal thisMed;
+    private MeditationLocal selectedMed;
     private Bitmap coverArt;
+    private Uri medUri;
 
+    private PlayerAdapter playerAdapter;
+    private boolean userIsSeeking = false;
 
-    private static final String TAG = PlayerActivity.class.getSimpleName();
+    private MediaPlayerHolder mMediaPlayerHolder;
+    private NotificationPanel notificationPanel;
+    private NotificationPanel.NotificationReceiver notificationReceiver;
 
-    //for the player
-    private SimpleExoPlayer player;
-    private MediaSource mediaSource;
-
-    //keep track of playback state and position
-    private boolean playWhenReady;
-    private long playerCurrentPosition;
-
-    //For the Video player
-    @BindView(R.id.exo_play)
-    PlayerView exoPlayerView;
+    //saving instances
+    private int position;
+    public static boolean isPlaying;
+    private static final String PLAYBACK_POS = "playback position";
+    private static final String IS_PLAYING = "is playing";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         playerBinding = DataBindingUtil.setContentView(this, R.layout.activity_player);
 
-        //retrieve information passed with the intent
-        thisMed = getIntent().getParcelableExtra(Constants.THIS_MED);
-        coverArt = getIntent().getParcelableExtra(Constants.ART);
-
-        playerCurrentPosition = C.TIME_UNSET;
-        //any player information stored before orientation change or similar?
-        if (savedInstanceState != null) {
-            if (savedInstanceState.containsKey(Constants.PLAYER_READY)) {
-                playWhenReady = savedInstanceState.getBoolean(Constants.PLAYER_READY);
-            }
-            if (savedInstanceState.containsKey(Constants.PLAYER_POSITION)) {
-                playerCurrentPosition = savedInstanceState.getLong(Constants.PLAYER_POSITION);
-            }
-
+        if (BuildConfig.DEBUG) {
+            Timber.plant(new Timber.DebugTree());
         }
+
+        if (savedInstanceState != null) {
+            if (savedInstanceState.containsKey(PLAYBACK_POS)) {
+                position = savedInstanceState.getInt(PLAYBACK_POS);
+            }
+            if (savedInstanceState.containsKey(IS_PLAYING)) {
+                isPlaying = savedInstanceState.getBoolean(IS_PLAYING);
+            }
+        }
+
+        //retrieve information passed with the intent
+        selectedMed = getIntent().getParcelableExtra(Constants.SELECTED_MED);
+        coverArt = getIntent().getParcelableExtra(Constants.ART);
+        medUri = getIntent().getParcelableExtra(Constants.URI);
+        Timber.v("Audio file: " + medUri);
+
         //setup the coverArt
         MedUtils.displayCoverArt(coverArt, playerBinding.thumbIv);
 
-        // Initialize the Media Session to display the video.
+        initializeUI();
+        initializePlaybackController();
+        initializeSeekbar();
         initializeSession();
-
-        // Initialize the player.
-        setupPlayer();
-
-    }
-
-    @Override
-    public void onSaveInstanceState(@NonNull Bundle outState) {
-        outState.putBoolean(Constants.PLAYER_READY, playWhenReady);
-        outState.putLong(Constants.PLAYER_POSITION, playerCurrentPosition);
-        super.onSaveInstanceState(outState);
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        if (player != null) {
-            playWhenReady = player.getPlayWhenReady();
-            playerCurrentPosition = player.getCurrentPosition();
-            releasePlayer();
-        }
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if (player != null) {
-            player.setPlayWhenReady(playWhenReady);
-            player.release();
-        }
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        if (player != null) {
-            player.setPlayWhenReady(playWhenReady);
-            setupPlayer();
-        }
+        Timber.d("onCreate: finished");
     }
 
     //Initializes the Media Session to be enabled with media buttons, transport controls, callbacks
@@ -132,6 +90,7 @@ public class PlayerActivity extends AppCompatActivity implements Player.EventLis
         mediaSession.setFlags(MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS |
                 MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS);
 
+
         // Set an initial PlaybackState with ACTION_PLAY, so media buttons can start the player.
         PlaybackStateCompat.Builder stateBuilder = new PlaybackStateCompat.Builder().setActions(
                 PlaybackStateCompat.ACTION_PLAY |
@@ -139,142 +98,172 @@ public class PlayerActivity extends AppCompatActivity implements Player.EventLis
         mediaSession.setPlaybackState(stateBuilder.build());
 
         // MySessionCallback has methods that handle callbacks from a media controller.
-        mediaSession.setCallback(new PlayerActivity.MySessionCallback());
+        mediaSession.setCallback(new MySessionCallback());
 
         // Start the Media Session since the activity is active.
         mediaSession.setActive(true);
     }
 
-    private void setupPlayer() {
-        if (player == null) {
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putInt(PLAYBACK_POS, mMediaPlayerHolder.getPosition());
+        outState.putBoolean(IS_PLAYING, isPlaying);
+    }
 
-            //setup the media source
-            mediaSource = new ExtractorMediaSource.Factory(new DefaultDataSourceFactory(
-                    this, Util.getUserAgent(this, "ExoPlay"),
-                    new DefaultBandwidthMeter())).createMediaSource(Uri.parse(thisMed.getStorage()));
+    @Override
+    protected void onStart() {
+        super.onStart();
+        playerAdapter.loadMedia(medUri);
+        if (isPlaying) {
+            playerAdapter.play();
+        }
+        Timber.d("onStart: create MediaPlayer");
+    }
 
-            //setup the player
-            player = ExoPlayerFactory.newSimpleInstance(this,
-                    new DefaultTrackSelector(new AdaptiveTrackSelection.
-                            Factory(new DefaultBandwidthMeter())));
+    @Override
+    protected void onStop() {
+        super.onStop();
+        mMediaPlayerHolder.setPlaybackInfoListener(null);
+        position = mMediaPlayerHolder.getPosition();
+        playerAdapter.release();
+        Timber.d("onStop: release MediaPlayer");
+    }
 
-            player.addListener(this);
-            player.prepare(mediaSource);
-            if (playerCurrentPosition != C.TIME_UNSET) {
-                player.seekTo(playerCurrentPosition);
+    private void initializeUI() {
+
+        playerBinding.titleTv.setText(selectedMed.getTitle());
+        playerBinding.subtitleTv.setText(selectedMed.getSubtitle());
+
+        playerBinding.pauseBt.setOnClickListener(
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        pausePlayback();
+                    }
+                });
+        playerBinding.playBt.setOnClickListener(
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        startPlayback();
+                        notificationPanel = new NotificationPanel(PlayerActivity.this, selectedMed.getTitle());
+                        notificationReceiver = new NotificationPanel.NotificationReceiver(PlayerActivity.this);
+                        registerReceiver(notificationReceiver, notificationReceiver.getIntentFilter());
+
+                    }
+                });
+
+    }
+
+    public void startPlayback() {
+        playerAdapter.play();
+        isPlaying = true;
+    }
+
+    private void restPlayback() {
+        playerAdapter.reset();
+        position = 0;
+        notificationPanel.notificationCancel();
+
+    }
+
+    public void pausePlayback() {
+        playerAdapter.pause();
+        isPlaying = false;
+    }
+
+    private void initializePlaybackController() {
+        mMediaPlayerHolder = new MediaPlayerHolder(this);
+        Timber.d("initializePlaybackController: created MediaPlayerHolder");
+        mMediaPlayerHolder.setPlaybackInfoListener(new PlaybackListener());
+        playerAdapter = mMediaPlayerHolder;
+        if (position != 0) {
+            mMediaPlayerHolder.setPosition(position);
+        }
+        Timber.d("initializePlaybackController: MediaPlayerHolder progress callback set");
+    }
+
+    private void initializeSeekbar() {
+        playerBinding.progressSb.setOnSeekBarChangeListener(
+                new SeekBar.OnSeekBarChangeListener() {
+                    int userSelectedPosition = 0;
+
+                    @Override
+                    public void onStartTrackingTouch(SeekBar seekBar) {
+                        userIsSeeking = true;
+                    }
+
+                    @Override
+                    public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                        if (fromUser) {
+                            userSelectedPosition = progress;
+                        }
+                    }
+
+                    @Override
+                    public void onStopTrackingTouch(SeekBar seekBar) {
+                        userIsSeeking = false;
+                        playerAdapter.seekTo(userSelectedPosition);
+                    }
+                });
+    }
+
+    class PlaybackListener extends PlaybackInfoListener {
+
+        @Override
+        public void onDurationChanged(int duration) {
+            playerBinding.progressSb.setMax(duration);
+
+            String displayDuration = String.format("%d:%d",
+                    TimeUnit.MILLISECONDS.toMinutes(duration),
+                    TimeUnit.MILLISECONDS.toSeconds(duration) -
+                            TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(duration)));
+            playerBinding.durationTv.setText(displayDuration);
+            Timber.d("Playback duration: " + displayDuration);
+        }
+
+        @Override
+        public void onPositionChanged(int position) {
+            if (!userIsSeeking) {
+                playerBinding.progressSb.setProgress(position);
+
+                String displayPosition = MedUtils.getDisplayTime(position, displayHours, MedUtils.CONVERT_POSITION);
+                playerBinding.positionTv.setText(String.valueOf(displayPosition));
+                Timber.d("setPlaybackPosition: setProgress " + displayPosition);
             }
-            player.setPlayWhenReady(playWhenReady);
-
-            Log.v("TEST", "playing state : " + player.getPlaybackState());
         }
 
-//        playerBinding.exoPlay.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View view) {
-//                player.setPlayWhenReady(true);
-//            }
-//        });
-//
-//        playerBinding.exoStop.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View view) {
-//                player.setPlayWhenReady(false);
-//            }
-//        });
-    }
-
-    //Release ExoPlayer when it is no longer needed.
-    private void releasePlayer() {
-        if (player != null) {
-            player.stop();
-            player.release();
-            player = null;
+        @Override
+        public void onStateChanged(@State int state) {
+            String stateToString = PlaybackInfoListener.convertStateToString(state);
+            Timber.v("onStateChanged " + stateToString);
         }
+
+        @Override
+        public void onPlaybackCompleted() {
+        }
+
     }
 
-    //Media Session Callbacks, where all external clients control the player.
+    /**
+     * Media Session Callbacks, enabling all external clients to control the player.
+     */
     class MySessionCallback extends MediaSessionCompat.Callback {
         @Override
         public void onPlay() {
-            player.setPlayWhenReady(true);
+            isPlaying = true;
         }
 
         @Override
         public void onPause() {
-            player.setPlayWhenReady(false);
-            playerCurrentPosition = player.getCurrentPosition();
+            isPlaying = false;
+            mMediaPlayerHolder.setPosition(position);
         }
 
         @Override
         public void onSkipToPrevious() {
-            player.seekTo(0);
+            playerAdapter.seekTo(0);
         }
-    }
-
-    // ExoPlayer Event Listeners
-
-    @Override
-    public void onTracksChanged(TrackGroupArray trackGroups, TrackSelectionArray trackSelections) {
-    }
-
-    @Override
-    public void onTimelineChanged(Timeline timeline, Object manifest, int reason) {
-
-    }
-
-    @Override
-    public void onLoadingChanged(boolean isLoading) {
-    }
-
-    /**
-     * Method that is called when the ExoPlayer state changes. Used to update the MediaSession
-     * PlayBackState to keep in sync, and post the media notification.
-     *
-     * @param playWhenReady true if ExoPlayer is playing, false if it's paused.
-     * @param playbackState int describing the state of ExoPlayer. Can be STATE_READY, STATE_IDLE,
-     *                      STATE_BUFFERING, or STATE_ENDED.
-     */
-    @Override
-    public void onPlayerStateChanged(boolean playWhenReady, int playbackState) {
-
-        if (playbackState == Player.STATE_READY) {
-            Log.i("TEST", "ExoPlayer State is: READY");
-        } else if (playbackState == Player.STATE_BUFFERING) {
-            Log.i("TEST", "ExoPlayer State is: BUFFERING");
-        } else if (playbackState == Player.STATE_ENDED) {
-            Log.i("TEST", "ExoPlayer State is: ENDED");
-        } else if (playbackState == Player.STATE_IDLE) {
-            Log.i("TEST", "ExoPlayer State is: IDLE");
-        }
-    }
-
-    @Override
-    public void onRepeatModeChanged(int repeatMode) {
-
-    }
-
-    @Override
-    public void onShuffleModeEnabledChanged(boolean shuffleModeEnabled) {
-
-    }
-
-    @Override
-    public void onPlayerError(ExoPlaybackException error) {
-
-    }
-
-    @Override
-    public void onPositionDiscontinuity(int reason) {
-
-    }
-
-    @Override
-    public void onPlaybackParametersChanged(PlaybackParameters playbackParameters) {
-
-    }
-
-    @Override
-    public void onSeekProcessed() {
-
     }
 }
