@@ -21,8 +21,6 @@ import com.example.android.meditationhub.player.PlayerAdapter;
 import com.example.android.meditationhub.util.Constants;
 import com.example.android.meditationhub.util.MedUtils;
 
-import java.util.concurrent.TimeUnit;
-
 import timber.log.Timber;
 
 public class PlayerActivity extends AppCompatActivity {
@@ -33,6 +31,8 @@ public class PlayerActivity extends AppCompatActivity {
     private Bitmap coverArt;
     private Uri medUri;
 
+    private int position;
+
     private PlayerAdapter playerAdapter;
     private boolean userIsSeeking = false;
 
@@ -41,9 +41,7 @@ public class PlayerActivity extends AppCompatActivity {
     private NotificationPanel.NotificationReceiver notificationReceiver;
 
     //saving instances
-    private int position;
     public static boolean isPlaying;
-    private static final String PLAYBACK_POS = "playback position";
     private static final String IS_PLAYING = "is playing";
 
     @Override
@@ -55,24 +53,28 @@ public class PlayerActivity extends AppCompatActivity {
             Timber.plant(new Timber.DebugTree());
         }
 
+        //retrieve information from the SaveInstance or Intent depending on the flow
         if (savedInstanceState != null) {
-            if (savedInstanceState.containsKey(PLAYBACK_POS)) {
-                position = savedInstanceState.getInt(PLAYBACK_POS);
-            }
-            if (savedInstanceState.containsKey(IS_PLAYING)) {
-                isPlaying = savedInstanceState.getBoolean(IS_PLAYING);
-            }
-        }
+            position = (int) getSavedInstanceState(savedInstanceState, Constants.PLAYBACK_POS, Constants.SAVED_INT);
+            isPlaying = (boolean) getSavedInstanceState(savedInstanceState, IS_PLAYING, Constants.SAVED_BOO);
+            selectedMed = (MeditationLocal) getSavedInstanceState(savedInstanceState, Constants.SELECTED_MED, Constants.SAVED_PARCEL);
+            coverArt = (Bitmap) getSavedInstanceState(savedInstanceState, Constants.ART, Constants.SAVED_PARCEL);
+            medUri = (Uri) getSavedInstanceState(savedInstanceState, Constants.URI, Constants.SAVED_PARCEL);
+        } else {
+            //retrieve information passed with the intent
+            selectedMed = getIntent().getParcelableExtra(Constants.SELECTED_MED);
+            medUri = getIntent().getParcelableExtra(Constants.URI);
 
-        //retrieve information passed with the intent
-        selectedMed = getIntent().getParcelableExtra(Constants.SELECTED_MED);
-        coverArt = getIntent().getParcelableExtra(Constants.ART);
-        medUri = getIntent().getParcelableExtra(Constants.URI);
-        Timber.v("Audio file: " + medUri);
+            int playAction = getIntent().getIntExtra(Constants.ACTION, Constants.AUTO_PLAY);
+            isPlaying = playAction == Constants.AUTO_PLAY;
+
+            coverArt = MedUtils.getCoverArt(medUri, this);
+        }
 
         //setup the coverArt
         MedUtils.displayCoverArt(coverArt, playerBinding.thumbIv);
 
+        //setup the player
         initializeUI();
         initializePlaybackController();
         initializeSeekbar();
@@ -80,8 +82,31 @@ public class PlayerActivity extends AppCompatActivity {
         Timber.d("onCreate: finished");
     }
 
-    //Initializes the Media Session to be enabled with media buttons, transport controls, callbacks
-    //and media controller.
+    /**
+     * retrieve information saved before activity was destroyed.
+     *
+     * @param savedInstanceState is the bundle holding the saved information
+     * @param key                indicates what information was saved
+     * @param type               is the type of variable to be retrieved
+     */
+    private Object getSavedInstanceState(Bundle savedInstanceState, String key, int type) {
+        if (savedInstanceState.containsKey(key)) {
+            switch (type) {
+                case Constants.SAVED_INT:
+                    return savedInstanceState.getInt(key);
+                case Constants.SAVED_BOO:
+                    return savedInstanceState.getBoolean(key);
+                case Constants.SAVED_PARCEL:
+                    return savedInstanceState.getParcelable(key);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Initializes the Media Session to be enabled with media buttons, transport controls, callbacks
+     * and media controller.
+     */
     private void initializeSession() {
 
         MediaSessionCompat mediaSession = new MediaSessionCompat(this, getLocalClassName());
@@ -107,8 +132,11 @@ public class PlayerActivity extends AppCompatActivity {
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        outState.putInt(PLAYBACK_POS, mMediaPlayerHolder.getPosition());
+        outState.putInt(Constants.PLAYBACK_POS, mMediaPlayerHolder.getPosition());
         outState.putBoolean(IS_PLAYING, isPlaying);
+        outState.putParcelable(Constants.SELECTED_MED, selectedMed);
+        outState.putParcelable(Constants.ART, coverArt);
+        outState.putParcelable(Constants.URI, medUri);
     }
 
     @Override
@@ -117,6 +145,7 @@ public class PlayerActivity extends AppCompatActivity {
         playerAdapter.loadMedia(medUri);
         if (isPlaying) {
             playerAdapter.play();
+            setupReceiver();
         }
         Timber.d("onStart: create MediaPlayer");
     }
@@ -127,6 +156,7 @@ public class PlayerActivity extends AppCompatActivity {
         mMediaPlayerHolder.setPlaybackInfoListener(null);
         position = mMediaPlayerHolder.getPosition();
         playerAdapter.release();
+        unregisterReceiver(notificationReceiver);
         Timber.d("onStop: release MediaPlayer");
     }
 
@@ -135,25 +165,36 @@ public class PlayerActivity extends AppCompatActivity {
         playerBinding.titleTv.setText(selectedMed.getTitle());
         playerBinding.subtitleTv.setText(selectedMed.getSubtitle());
 
-        playerBinding.pauseBt.setOnClickListener(
+        playerBinding.playPauseBt.setImageResource(MedUtils.getPlaybackControl());
+        playerBinding.stopBt.setOnClickListener(
                 new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
-                        pausePlayback();
+                        resetPlayback();
                     }
                 });
-        playerBinding.playBt.setOnClickListener(
+        playerBinding.playPauseBt.setOnClickListener(
                 new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
-                        startPlayback();
-                        notificationPanel = new NotificationPanel(PlayerActivity.this, selectedMed.getTitle());
-                        notificationReceiver = new NotificationPanel.NotificationReceiver(PlayerActivity.this);
-                        registerReceiver(notificationReceiver, notificationReceiver.getIntentFilter());
+                        if (isPlaying) {
+                            pausePlayback();
+                        } else {
+                            startPlayback();
+                            setupReceiver();
+                        }
 
                     }
                 });
+    }
 
+    private void setupReceiver() {
+        notificationPanel = new NotificationPanel(PlayerActivity.this,
+                selectedMed.getTitle(), medUri);
+        notificationReceiver = new NotificationPanel.
+                NotificationReceiver(PlayerActivity.this);
+        registerReceiver(notificationReceiver,
+                notificationReceiver.getIntentFilter());
     }
 
     public void startPlayback() {
@@ -161,7 +202,7 @@ public class PlayerActivity extends AppCompatActivity {
         isPlaying = true;
     }
 
-    private void restPlayback() {
+    private void resetPlayback() {
         playerAdapter.reset();
         position = 0;
         notificationPanel.notificationCancel();
@@ -184,6 +225,7 @@ public class PlayerActivity extends AppCompatActivity {
         Timber.d("initializePlaybackController: MediaPlayerHolder progress callback set");
     }
 
+    //TODO: Seeker is not updating
     private void initializeSeekbar() {
         playerBinding.progressSb.setOnSeekBarChangeListener(
                 new SeekBar.OnSeekBarChangeListener() {
@@ -215,10 +257,7 @@ public class PlayerActivity extends AppCompatActivity {
         public void onDurationChanged(int duration) {
             playerBinding.progressSb.setMax(duration);
 
-            String displayDuration = String.format("%d:%d",
-                    TimeUnit.MILLISECONDS.toMinutes(duration),
-                    TimeUnit.MILLISECONDS.toSeconds(duration) -
-                            TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(duration)));
+            String displayDuration = MedUtils.getDisplayTime(duration, false, MedUtils.CONVERT_DURATION);
             playerBinding.durationTv.setText(displayDuration);
             Timber.d("Playback duration: " + displayDuration);
         }
@@ -227,9 +266,8 @@ public class PlayerActivity extends AppCompatActivity {
         public void onPositionChanged(int position) {
             if (!userIsSeeking) {
                 playerBinding.progressSb.setProgress(position);
-
                 String displayPosition = MedUtils.getDisplayTime(position, displayHours, MedUtils.CONVERT_POSITION);
-                playerBinding.positionTv.setText(String.valueOf(displayPosition));
+                playerBinding.positionTv.setText(displayPosition);
                 Timber.d("setPlaybackPosition: setProgress " + displayPosition);
             }
         }
@@ -259,11 +297,6 @@ public class PlayerActivity extends AppCompatActivity {
         public void onPause() {
             isPlaying = false;
             mMediaPlayerHolder.setPosition(position);
-        }
-
-        @Override
-        public void onSkipToPrevious() {
-            playerAdapter.seekTo(0);
         }
     }
 }

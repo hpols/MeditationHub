@@ -6,7 +6,8 @@
     <android.support.constraint.ConstraintLayout
         android:id="@+id/media_holder"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:background="@color/colorPrimaryDark">
 
         <ImageView
             android:id="@+id/thumb_iv"
@@ -43,23 +44,27 @@
             tools:text="Subtitle of the Meditation" />
 
         <ImageButton
-            android:id="@+id/play_bt"
+            android:id="@+id/play_pause_bt"
             style="@style/button"
-            android:contentDescription="@string/play_button_contDescrip"
+            android:contentDescription="@string/play_pause_button_contDescrip"
             android:src="@android:drawable/ic_media_play"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@+id/pause_bt"
+            app:layout_constraintEnd_toStartOf="@+id/stop_bt"
             app:layout_constraintHorizontal_chainStyle="packed"
             app:layout_constraintStart_toStartOf="@+id/progress_sb" />
 
         <ImageButton
-            android:id="@+id/pause_bt"
-            style="@style/button"
-            android:contentDescription="@string/pause_button_contDescrip"
-            android:src="@android:drawable/ic_media_pause"
-            app:layout_constraintBottom_toBottomOf="parent"
+            android:id="@+id/stop_bt"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_margin="@dimen/margin_std"
+            android:layout_marginBottom="8dp"
+            android:background="@color/colorAccent"
+            android:contentDescription="@string/stop_button_contDescrip"
+            app:layout_constraintBottom_toBottomOf="@+id/play_pause_bt"
             app:layout_constraintEnd_toEndOf="@+id/progress_sb"
-            app:layout_constraintStart_toEndOf="@+id/play_bt" />
+            app:layout_constraintStart_toEndOf="@+id/play_pause_bt"
+            app:layout_constraintTop_toTopOf="@+id/play_pause_bt" />
 
         <TextView
             android:id="@+id/position_tv"
@@ -86,8 +91,7 @@
             android:layout_height="32dp"
             android:layout_margin="@dimen/margin_std"
             android:layout_weight="1"
-            android:focusable="false"
-            app:layout_constraintBottom_toTopOf="@+id/play_bt"
+            app:layout_constraintBottom_toTopOf="@+id/play_pause_bt"
             app:layout_constraintEnd_toStartOf="@+id/duration_tv"
             app:layout_constraintStart_toEndOf="@+id/position_tv" />
 

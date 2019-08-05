@@ -62,7 +62,7 @@ public final class MediaPlayerHolder implements PlayerAdapter {
             mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                 @Override
                 public void onCompletion(MediaPlayer mediaPlayer) {
-                    stopUpdatingCallbackWithPosition();
+                    stopUpdatingCallbackWithPosition(true);
                     if (playbackInfoListener != null) {
                         playbackInfoListener.onStateChanged(PlaybackInfoListener.State.COMPLETED);
                         playbackInfoListener.onPlaybackCompleted();
@@ -143,7 +143,7 @@ public final class MediaPlayerHolder implements PlayerAdapter {
                 playbackInfoListener.onStateChanged(PlaybackInfoListener.State.RESET);
                 currentPosition = 0;
             }
-            stopUpdatingCallbackWithPosition();
+            stopUpdatingCallbackWithPosition(true);
         }
     }
 
@@ -166,36 +166,32 @@ public final class MediaPlayerHolder implements PlayerAdapter {
         }
     }
 
-    /**
-     * Syncs the mediaPlayer currentPosition with mPlaybackProgressCallback via recurring task.
-     */
     private void startUpdatingCallbackWithPosition() {
         if (executorService == null) {
             executorService = Executors.newSingleThreadScheduledExecutor();
-        }
-        if (runnableSeekbarUpdate == null) {
-            runnableSeekbarUpdate = new Runnable() {
+
+            executorService.scheduleAtFixedRate(new Runnable() {
+
                 @Override
-                public void run() {
-                    updateProgressCallbackTask();
+                public void run(){
+                    try {
+                        updateProgressCallbackTask();
+                    } catch (Exception e) {
+                        Timber.e("Exception from Playback position update: " +e );
+                        //TODO: E/MediaPlayerHolder: Exception from Playback position update: android.view.ViewRootImpl$CalledFromWrongThreadException: Only the original thread that created a view hierarchy can touch its views.
+                    }
+
                 }
-            };
+            }, 0L, 1L, TimeUnit.SECONDS);
         }
-        executorService.scheduleAtFixedRate(
-                runnableSeekbarUpdate,
-                0,
-                PLAYBACK_POSITION_REFRESH_INTERVAL_MS,
-                TimeUnit.MILLISECONDS
-        );
     }
 
-    // Reports media playback currentPosition to mPlaybackProgressCallback.
-    private void stopUpdatingCallbackWithPosition() {
+    private void stopUpdatingCallbackWithPosition(boolean resetUIPlaybackPosition) {
         if (executorService != null) {
             executorService.shutdownNow();
             executorService = null;
             runnableSeekbarUpdate = null;
-            if (true && playbackInfoListener != null) {
+            if (resetUIPlaybackPosition && playbackInfoListener != null) {
                 playbackInfoListener.onPositionChanged(0);
             }
         }
@@ -203,7 +199,7 @@ public final class MediaPlayerHolder implements PlayerAdapter {
 
     private void updateProgressCallbackTask() {
         if (mediaPlayer != null && mediaPlayer.isPlaying()) {
-            currentPosition = mediaPlayer.getCurrentPosition();
+            int currentPosition = mediaPlayer.getCurrentPosition();
             if (playbackInfoListener != null) {
                 playbackInfoListener.onPositionChanged(currentPosition);
             }

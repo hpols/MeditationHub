@@ -33,4 +33,13 @@ public class Constants {
     public static final String ACTION_PAUSE_PLAY = "pause/play";
     public static final String ACTION_OPEN_APP = "open app";
     public static final String URI = "uri of meditation";
+
+
+    public static final int SAVED_INT = 0;
+    public static final int SAVED_BOO = 1;
+    public static final int SAVED_PARCEL = 2;
+
+
+    public static final String PLAYBACK_POS = "playback position";
+    public static final int CONVERT_POSITION = 1;
 }

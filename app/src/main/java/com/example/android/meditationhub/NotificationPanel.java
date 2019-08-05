@@ -8,11 +8,14 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.Build;
 import android.widget.RemoteViews;
 
 import com.example.android.meditationhub.ui.PlayerActivity;
 import com.example.android.meditationhub.util.Constants;
+import com.example.android.meditationhub.util.MedUtils;
 
 
 /**
@@ -25,23 +28,19 @@ public class NotificationPanel {
     private static RemoteViews remoteView;
     private final Context ctxt;
     private final String title;
+    private final Uri medUri;
     private static NotificationManager nManager;
     private static Notification.Builder nBuilder;
 
-    public NotificationPanel(Context ctxt, String title) {
+    public NotificationPanel(Context ctxt, String title, Uri medUri) {
         this.ctxt = ctxt;
         this.title = title;
-
+        this.medUri = medUri;
         createNotification();
     }
 
     public static void updateButton() {
-        int image;
-        if (PlayerActivity.isPlaying) {
-            image = android.R.drawable.ic_media_pause;
-        } else {
-            image =  android.R.drawable.ic_media_play;
-        }
+        int image = MedUtils.getPlaybackControl();
         remoteView.setImageViewResource(R.id.play_pause_bt, image);
     }
 
@@ -55,6 +54,10 @@ public class NotificationPanel {
 
         remoteView = new RemoteViews(ctxt.getPackageName(), R.layout.messageview);
         remoteView.setTextViewText(R.id.title_tv, title);
+
+        Bitmap coverArt = MedUtils.getCoverArt(medUri, ctxt);
+
+        remoteView.setImageViewBitmap(R.id.app_btn, coverArt);
         updateButton();
 
         //setListeners(remoteView); --> This will open application on click!

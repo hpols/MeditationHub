@@ -16,6 +16,7 @@ import android.support.annotation.Nullable;
 import android.support.v4.content.FileProvider;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.helper.ItemTouchHelper;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -30,6 +31,7 @@ import com.example.android.meditationhub.model.MeditationLocal;
 import com.example.android.meditationhub.model.MeditationLocalDb;
 import com.example.android.meditationhub.model.MeditationLocalViewModel;
 import com.example.android.meditationhub.util.EntryExecutor;
+import com.example.android.meditationhub.util.SwipeToDeleteCallback;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
@@ -104,6 +106,9 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
                 medAdapter = new MeditationAdapter(MainActivity.this, mAuth, meditationLocals, MainActivity.this);
                 mainBinding.meditationListRv.setLayoutManager(new LinearLayoutManager(MainActivity.this));
                 mainBinding.meditationListRv.setAdapter(medAdapter);
+                ItemTouchHelper itemTouchHelper = new
+                        ItemTouchHelper(new SwipeToDeleteCallback(medAdapter, MainActivity.this));
+                itemTouchHelper.attachToRecyclerView(mainBinding.meditationListRv);
             }
         });
     }
@@ -123,7 +128,7 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
                     receivedMeditation.setId(key);
                     receivedMeditation.setStorage(null);
 
-                    long id = meditationLocalDb.meditationLocalDao().createEntry(receivedMeditation);
+                    meditationLocalDb.meditationLocalDao().createEntry(receivedMeditation);
                 }
             }
         });

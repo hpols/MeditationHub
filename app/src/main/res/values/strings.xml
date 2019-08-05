@@ -4,8 +4,8 @@
     <string name="download_denied">Please give MeditationHub permission to write to your storage</string>
     <string name="download_blocked">The writing permission has been blocked. The file cannot be downloaded.</string>
     <string name="thumb_contDescrip">cover art of the meditation</string>
-    <string name="play_button_contDescrip">play button</string>
-    <string name="pause_button_contDescrip">pause button</string>
+    <string name="play_pause_button_contDescrip">play/pause button</string>
+    <string name="stop_button_contDescrip">stop button</string>
     <string name="download_error">An error occurred downloading the file</string>
     <string name="med_image_transition">Meditation Image</string>
     <string name="med_title_transition">Meditation Title</string>

@@ -1,13 +1,16 @@
 package com.example.android.meditationhub.util;
 
+import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.media.MediaMetadataRetriever;
+import android.net.Uri;
 import android.widget.ImageView;
 
 import com.example.android.meditationhub.R;
 import com.example.android.meditationhub.ui.PlayerActivity;
 
 import java.util.Locale;
-import java.util.concurrent.TimeUnit;
 
 public class MedUtils {
 
@@ -22,35 +25,50 @@ public class MedUtils {
         }
     }
 
-    public static String getDisplayTime(int duration, boolean displayHours, int convert) {
-        long h = TimeUnit.MILLISECONDS.toHours(duration);
-        long m = TimeUnit.MILLISECONDS.toMinutes(duration)- TimeUnit.MILLISECONDS.toMinutes(h);
-        long s = TimeUnit.MILLISECONDS.toSeconds(duration) - TimeUnit.MINUTES.toSeconds(m);
+    public static String getDisplayTime(int millis, boolean displayHours, int convert) {
+        StringBuffer buf = new StringBuffer();
 
-        String format_ms = "%d:%d";
-        String format_hms = "%d:%d:%d";
-        String output = "00:00:00";
+        int hours = millis / (1000*60*60);
+        int minutes = ( millis % (1000*60*60) ) / (1000*60);
+        int seconds = ( ( millis % (1000*60*60) ) % (1000*60) ) / 1000;
 
-        switch (convert) {
-            case CONVERT_DURATION:
-                if(h == 0) {
-                    output = String.format(Locale.getDefault(), format_ms, m, s);
-                    PlayerActivity.displayHours = false;
-                } else {
-                    output = String.format(Locale.getDefault(), format_hms, h, m, s);
-                    PlayerActivity.displayHours = true;
-                }
-                break;
-            case CONVERT_POSITION:
-                if(displayHours) {
-                    output = String.format(Locale.getDefault(), format_hms, h, m, s);
-                } else {
-                    output = String.format(Locale.getDefault(), format_ms, m, s);
-                }
-                break;
+        buf
+                .append(String.format(Locale.getDefault(), "%02d", hours))
+                .append(":")
+                .append(String.format(Locale.getDefault(), "%02d", minutes))
+                .append(":")
+                .append(String.format(Locale.getDefault(), "%02d", seconds));
+
+        return buf.toString();
+    }
+
+    /**
+     * get the cover art of the meditation (as available)
+     * see: //https://stackoverflow.com/a/21549403/7601437
+     *
+     * @param medUri is the meditation audio in question
+     */
+    static public Bitmap getCoverArt(Uri medUri, Context ctxt) {
+
+        MediaMetadataRetriever mmr = new MediaMetadataRetriever();
+        mmr.setDataSource(ctxt, medUri);
+
+        byte[] data = mmr.getEmbeddedPicture();
+
+        if (data != null) {
+            return BitmapFactory.decodeByteArray(data, 0, data.length);
+        } else {
+            return BitmapFactory.decodeResource(ctxt.getResources(), R.drawable.ic_meditation_hub);
         }
+    }
 
-
-        return output;
+    public static int getPlaybackControl() {
+        int image;
+        if (PlayerActivity.isPlaying) {
+            image = android.R.drawable.ic_media_pause;
+        } else {
+            image =  android.R.drawable.ic_media_play;
+        }
+        return image;
     }
 }

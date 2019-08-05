@@ -6,8 +6,6 @@ import android.app.ActivityOptions;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -26,6 +24,7 @@ import com.example.android.meditationhub.model.MeditationLocal;
 import com.example.android.meditationhub.model.MeditationLocalDb;
 import com.example.android.meditationhub.ui.PlayerActivity;
 import com.example.android.meditationhub.util.Constants;
+import com.example.android.meditationhub.util.EntryExecutor;
 import com.example.android.meditationhub.util.MedUtils;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -54,7 +53,6 @@ public class MeditationAdapter extends RecyclerView.Adapter<MeditationAdapter.Me
     private static FirebaseUser user;
 
     private List<MeditationLocal> meditations;
-
     private MeditationLocalDb meditationLocalDb;
 
     //alert the MainActivity of download related information
@@ -102,9 +100,9 @@ public class MeditationAdapter extends RecyclerView.Adapter<MeditationAdapter.Me
         } else {
             actionImage = android.R.drawable.ic_media_play;
             medVh.thumbIv.setVisibility(View.VISIBLE);
-            medVh.medUri =getUri(selectedMed);
+            medVh.medUri = getUri(selectedMed);
 
-            medVh.coverArt = getCoverArt(medVh.medUri);
+            medVh.coverArt = MedUtils.getCoverArt(medVh.medUri, ctxt);
             MedUtils.displayCoverArt(medVh.coverArt, medVh.thumbIv);
         }
         medVh.actionIb.setImageResource(actionImage);
@@ -120,44 +118,44 @@ public class MeditationAdapter extends RecyclerView.Adapter<MeditationAdapter.Me
                     if (selectedMed.getStorage() == null) {
                         Timber.v("downloaded started");
                         //download file
-                        Permissions.check(ctxt, Manifest.permission.WRITE_EXTERNAL_STORAGE, 
+                        Permissions.check(ctxt, Manifest.permission.WRITE_EXTERNAL_STORAGE,
                                 null, new PermissionHandler() {
-                            @Override
-                            public void onGranted() {
-                                // Create a storage reference from our app
-                                StorageReference ref = FirebaseStorage.getInstance().getReference()
-                                        .child(selectedMed.getFilename());
+                                    @Override
+                                    public void onGranted() {
+                                        // Create a storage reference from our app
+                                        StorageReference ref = FirebaseStorage.getInstance().getReference()
+                                                .child(selectedMed.getFilename());
 
-                                ref.getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
-                                    @Override
-                                    public void onSuccess(Uri uri) {
-                                        adapterInterface.download(uri, selectedMed, medPos);
+                                        ref.getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
+                                            @Override
+                                            public void onSuccess(Uri uri) {
+                                                adapterInterface.download(uri, selectedMed, medPos);
+                                            }
+                                        }).addOnFailureListener(new OnFailureListener() {
+                                            @Override
+                                            public void onFailure(@NonNull Exception exception) {
+                                                Timber.e(ctxt.getString(R.string.download_error)
+                                                        + exception.toString());
+                                                Toast.makeText(ctxt, ctxt.getString(R.string.download_error),
+                                                        Toast.LENGTH_LONG).show();
+                                            }
+                                        });
                                     }
-                                }).addOnFailureListener(new OnFailureListener() {
+
                                     @Override
-                                    public void onFailure(@NonNull Exception exception) {
-                                        Timber.e(ctxt.getString(R.string.download_error)
-                                                + exception.toString());
-                                        Toast.makeText(ctxt, ctxt.getString(R.string.download_error),
+                                    public void onDenied(Context context, ArrayList<String> deniedPermissions) {
+                                        super.onDenied(context, deniedPermissions);
+                                        Toast.makeText(ctxt, ctxt.getString(R.string.download_denied),
                                                 Toast.LENGTH_LONG).show();
                                     }
+
+                                    @Override
+                                    public boolean onBlocked(Context context, ArrayList<String> blockedList) {
+                                        Toast.makeText(ctxt, ctxt.getString(R.string.download_blocked),
+                                                Toast.LENGTH_LONG).show();
+                                        return super.onBlocked(context, blockedList);
+                                    }
                                 });
-                            }
-
-                            @Override
-                            public void onDenied(Context context, ArrayList<String> deniedPermissions) {
-                                super.onDenied(context, deniedPermissions);
-                                Toast.makeText(ctxt, ctxt.getString(R.string.download_denied),
-                                        Toast.LENGTH_LONG).show();
-                            }
-
-                            @Override
-                            public boolean onBlocked(Context context, ArrayList<String> blockedList) {
-                                Toast.makeText(ctxt, ctxt.getString(R.string.download_blocked),
-                                        Toast.LENGTH_LONG).show();
-                                return super.onBlocked(context, blockedList);
-                            }
-                        });
 
                     } else {
                         //start mediaPlayer
@@ -172,6 +170,8 @@ public class MeditationAdapter extends RecyclerView.Adapter<MeditationAdapter.Me
                 goToPlayer(selectedMed, medVh.coverArt, medVh.medUri, medVh.thumbIv, Constants.JUST_OPEN);
             }
         });
+
+
     }
 
     private Uri getUri(MeditationLocal selectedMed) {
@@ -202,30 +202,24 @@ public class MeditationAdapter extends RecyclerView.Adapter<MeditationAdapter.Me
         return meditations.size();
     }
 
-    /**
-     * get the cover art of the meditation (as available)
-     * see: //https://stackoverflow.com/a/21549403/7601437
-     *
-     * @param medUri is the meditation audio in question
-     */
-    private Bitmap getCoverArt(Uri medUri) {
-
-
-        MediaMetadataRetriever mmr = new MediaMetadataRetriever();
-        mmr.setDataSource(ctxt, medUri);
-
-        byte[] data = mmr.getEmbeddedPicture();
-
-        if (data != null) {
-            return BitmapFactory.decodeByteArray(data, 0, data.length);
-        } else {
-            return BitmapFactory.decodeResource(ctxt.getResources(), R.drawable.ic_meditation_hub);
-        }
-    }
-
     public static void logout() {
         user = null;
     }
+
+    public void deleteTask(final int position) {
+
+        //TODO: warning dialog with opt out checkbox
+        EntryExecutor.getInstance().diskIO().execute(new Runnable() {
+            @Override
+            public void run() {
+                MeditationLocal selectedMed = meditations.get(position);
+                selectedMed.setStorage(null);
+                meditationLocalDb.meditationLocalDao().updateEntry(selectedMed);
+                notifyItemChanged(position);
+            }
+        });
+    }
+
 
     class MeditationVH extends RecyclerView.ViewHolder {
 
