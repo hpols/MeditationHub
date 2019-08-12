@@ -9,14 +9,14 @@ import android.os.Parcelable;
 import android.support.annotation.NonNull;
 
 @Entity(tableName = "meditations")
-public class MeditationLocal implements Parcelable {
+public class MeditationLocal implements Parcelable, ItemList, Comparable<MeditationLocal> {
 
     private static final String ID = "id";
     private static final String FILENAME = "filename";
-    private static final String LOCATION = "location";
     private static final String SUBTITLE = "subtitle";
     private static final String TITLE = "title";
     private static final String STORAGE = "storage";
+    private static final String CATEGORY = "category";
 
     @NonNull
     @PrimaryKey
@@ -24,8 +24,6 @@ public class MeditationLocal implements Parcelable {
     private String id;
     @ColumnInfo(name = FILENAME)
     private String filename;
-    @ColumnInfo(name = LOCATION)
-    private String location;
     @ColumnInfo(name = SUBTITLE)
     private String subtitle;
     @ColumnInfo(name = TITLE)
@@ -33,19 +31,23 @@ public class MeditationLocal implements Parcelable {
     @ColumnInfo(name = STORAGE)
     private String storage;
 
+    @ColumnInfo(name = CATEGORY)
+    private String category;
+
     @Ignore //without ID
     public MeditationLocal() {
 
     }
 
     //with ID for Room
-    MeditationLocal(String id, String filename, String location, String subtitle, String title, String storage) {
+    MeditationLocal(String id, String filename, String subtitle, String title,
+                    String storage, String category) {
         this.id = id;
         this.filename = filename;
-        this.location = location;
         this.subtitle = subtitle;
         this.title = title;
         this.storage = storage;
+        this.category = category;
     }
 
     public String getFilename() {
@@ -54,15 +56,6 @@ public class MeditationLocal implements Parcelable {
 
     public MeditationLocal setFilename(String filename) {
         this.filename = filename;
-        return this;
-    }
-
-    public String getLocation() {
-        return location;
-    }
-
-    public MeditationLocal setLocation(String location) {
-        this.location = location;
         return this;
     }
 
@@ -102,19 +95,30 @@ public class MeditationLocal implements Parcelable {
         return this;
     }
 
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+    }
+
+    @NonNull
     @Override
     public String toString() {
         return "MeditationLocal{" +
                 "id='" + id + '\'' +
                 ", filename='" + filename + '\'' +
-                ", location='" + location + '\'' +
                 ", subtitle='" + subtitle + '\'' +
                 ", title='" + title + '\'' +
                 ", storage='" + storage + '\'' +
+                ", category ='" + category + '\'' +
                 '}';
     }
 
-    /** Parcable Functionality **/
+    /**
+     * Parcable Functionality
+     **/
 
     public static final Creator<MeditationLocal> CREATOR = new Creator<MeditationLocal>() {
         @Override
@@ -132,10 +136,10 @@ public class MeditationLocal implements Parcelable {
     private MeditationLocal(Parcel in) {
         id = in.readString();
         filename = in.readString();
-        location = in.readString();
         subtitle = in.readString();
         title = in.readString();
         storage = in.readString();
+        category = in.readString();
     }
 
     @Override
@@ -147,10 +151,23 @@ public class MeditationLocal implements Parcelable {
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeString(id);
         dest.writeString(filename);
-        dest.writeString(location);
         dest.writeString(title);
         dest.writeString(subtitle);
         dest.writeString(storage);
+        dest.writeString(category);
 
+    }
+
+    @Override
+    public int getItemType() {
+        return ItemList.TYPE_ITEM;
+    }
+
+    @Override
+    public int compareTo(MeditationLocal o) {
+        if (getCategory() == null || o.getCategory() == null) {
+            return 0;
+        }
+        return getCategory().compareTo(o.getCategory());
     }
 }

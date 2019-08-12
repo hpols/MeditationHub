@@ -3,7 +3,6 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/item_cl"
-    style="@android:style/Widget.ListView"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
@@ -16,7 +15,7 @@
         app:layout_constraintEnd_toStartOf="@+id/left_gl"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@+id/title_tv"
-        app:srcCompat="@mipmap/ic_launcher_round" />
+        tools:srcCompat="@drawable/ic_meditation_hub" />
 
     <android.support.constraint.Guideline
         android:id="@+id/left_gl"
@@ -27,12 +26,15 @@
 
     <TextView
         android:id="@+id/title_tv"
-        style="@style/text"
+        style="@style/text.time"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_gravity="start"
-        android:layout_margin="@dimen/margin_std"
-        android:textSize="24sp"
+        android:shadowColor="@android:color/background_light"
+        android:shadowDx="1"
+        android:shadowDy="1"
+        android:shadowRadius="0.6"
+        android:textSize="16sp"
         app:layout_constraintEnd_toStartOf="@+id/right_gl"
         app:layout_constraintStart_toStartOf="@id/left_gl"
         app:layout_constraintTop_toTopOf="parent"
@@ -44,8 +46,8 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_gravity="start"
-        android:layout_margin="8dp"
         android:textStyle="italic"
+
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="@+id/title_tv"
         app:layout_constraintStart_toStartOf="@+id/title_tv"

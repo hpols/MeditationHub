@@ -30,7 +30,7 @@ public interface MeditationLocalDao {
     //––– UPDATE Methods –––//
 
     @Update(onConflict = OnConflictStrategy.IGNORE)
-    void updateEntry(MeditationLocal meditationLocal);
+    int updateEntry(MeditationLocal meditationLocal);
 
     // –––DELETE METHODS –––//
     @Delete

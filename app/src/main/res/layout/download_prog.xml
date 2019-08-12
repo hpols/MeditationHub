@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal">
+
+    <TextView
+        android:id="@+id/snackbar_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical|start"
+        android:layout_weight="1"
+        android:ellipsize="end"
+        android:maxLines="@integer/design_snackbar_text_max_lines"
+        android:paddingLeft="@dimen/design_snackbar_padding_horizontal"
+        android:paddingTop="@dimen/design_snackbar_padding_vertical"
+        android:paddingRight="@dimen/design_snackbar_padding_horizontal"
+        android:paddingBottom="@dimen/design_snackbar_padding_vertical"
+        android:text="Downloading: TITLE"
+        android:textAppearance="@style/TextAppearance.Design.Snackbar.Message" />
+
+    <ProgressBar
+        android:id="@+id/circularProgressbar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_gravity="center_vertical|end"
+        android:gravity="center_vertical|right"
+        android:indeterminate="false"
+        android:max="100"
+        android:padding="@dimen/margin_std"
+        android:progress="50"
+        android:progressDrawable="@drawable/prog_circular"
+        android:secondaryProgress="100" />
+</LinearLayout>

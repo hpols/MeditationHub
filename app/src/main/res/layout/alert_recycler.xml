@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/border">
+
+    <ImageView
+        android:id="@+id/remove_iv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginLeft="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        android:contentDescription="@string/remove_contDescrip"
+        android:tint="@color/colorAccent"
+        app:layout_constraintBottom_toBottomOf="@+id/alert_cb"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/alert_tv"
+        app:srcCompat="@android:drawable/stat_sys_upload" />
+
+    <TextView
+        android:id="@+id/alert_tv"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginLeft="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginRight="8dp"
+        android:text="@string/alert_title"
+        android:textColor="@color/colorAccent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/remove_iv"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="@string/alert_title" />
+
+    <CheckBox
+        android:id="@+id/alert_cb"
+        style="@style/text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:checked="true"
+        android:shadowColor="@color/colorPrimaryDark"
+        android:text="@string/alert_cb"
+        android:textStyle="italic"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/alert_ok_bt"
+        app:layout_constraintHorizontal_weight="1"
+        app:layout_constraintStart_toEndOf="@+id/remove_iv"
+        app:layout_constraintStart_toStartOf="@+id/alert_tv"
+        app:layout_constraintTop_toBottomOf="@+id/alert_tv" />
+
+    <Button
+        android:id="@+id/alert_ok_bt"
+        style="@style/button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@android:color/transparent"
+        android:text="@android:string/ok"
+        app:layout_constraintBottom_toBottomOf="@+id/alert_cb"
+        app:layout_constraintEnd_toStartOf="@+id/alert_cancel_bt"
+        app:layout_constraintStart_toEndOf="@+id/alert_cb"
+        app:layout_constraintTop_toTopOf="@+id/alert_cb" />
+
+    <Button
+        android:id="@+id/alert_cancel_bt"
+        style="@style/button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginLeft="8dp"
+        android:background="@android:color/transparent"
+        android:text="@android:string/cancel"
+        app:layout_constraintBottom_toBottomOf="@+id/alert_ok_bt"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/alert_ok_bt"
+        app:layout_constraintTop_toTopOf="@+id/alert_ok_bt" />
+
+
+</android.support.constraint.ConstraintLayout>

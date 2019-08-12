@@ -64,9 +64,7 @@ public class PlayerActivity extends AppCompatActivity {
             //retrieve information passed with the intent
             selectedMed = getIntent().getParcelableExtra(Constants.SELECTED_MED);
             medUri = getIntent().getParcelableExtra(Constants.URI);
-
             int playAction = getIntent().getIntExtra(Constants.ACTION, Constants.AUTO_PLAY);
-            isPlaying = playAction == Constants.AUTO_PLAY;
 
             coverArt = MedUtils.getCoverArt(medUri, this);
         }
@@ -108,6 +106,7 @@ public class PlayerActivity extends AppCompatActivity {
      * and media controller.
      */
     private void initializeSession() {
+        setDNDmode();
 
         MediaSessionCompat mediaSession = new MediaSessionCompat(this, getLocalClassName());
 
@@ -127,6 +126,10 @@ public class PlayerActivity extends AppCompatActivity {
 
         // Start the Media Session since the activity is active.
         mediaSession.setActive(true);
+    }
+
+    private void setDNDmode() {
+
     }
 
     @Override

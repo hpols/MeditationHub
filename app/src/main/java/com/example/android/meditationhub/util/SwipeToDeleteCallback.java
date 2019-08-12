@@ -10,6 +10,7 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.helper.ItemTouchHelper;
 import android.view.View;
+import android.widget.CheckBox;
 
 import com.example.android.meditationhub.MeditationAdapter;
 import com.example.android.meditationhub.R;
@@ -22,16 +23,27 @@ public class SwipeToDeleteCallback extends ItemTouchHelper.SimpleCallback {
     private MeditationAdapter medAdapter;
 
     private Drawable deleteIc;
+    private CheckBox removeText;
     private final ColorDrawable bg;
+    private boolean showAlert;
 
 
-    public SwipeToDeleteCallback(MeditationAdapter medAdapter, Context ctxt) {
+    public SwipeToDeleteCallback(MeditationAdapter medAdapter, Context ctxt, boolean showAlert) {
         super(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT);
         this.medAdapter = medAdapter;
+        this.showAlert = showAlert;
+
         deleteIc = ContextCompat.getDrawable(ctxt, android.R.drawable.stat_sys_upload_done);
         deleteIc.setColorFilter(ctxt.getResources().getColor(R.color.colorAccent), PorterDuff.Mode.ADD);
-        bg = new ColorDrawable(ctxt.getResources().getColor(R.color.colorPrimary));
+        deleteIc.setAlpha(125);
+
+        removeText.setText(ctxt.getResources().getString(R.string.alert_title));
+        removeText.setChecked(true);
+
+        bg = new ColorDrawable(ctxt.getResources().getColor(android.R.color.darker_gray));
+        bg.setAlpha(125);
     }
+
 
     @Override
     public boolean onMove(@NonNull RecyclerView recView, @NonNull RecyclerView.ViewHolder vH,
@@ -43,7 +55,7 @@ public class SwipeToDeleteCallback extends ItemTouchHelper.SimpleCallback {
     @Override
     public void onSwiped(@NonNull RecyclerView.ViewHolder vH, int direction) {
         int position = vH.getAdapterPosition();
-        medAdapter.deleteTask(position);
+        medAdapter.removeAudio(position);
     }
 
     @Override

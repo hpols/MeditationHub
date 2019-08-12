@@ -3,9 +3,9 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/item_cl"
-    style="@android:style/Widget.ListView"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    android:layout_height="wrap_content"
+    android:background="@drawable/border">
 
     <ImageView
         android:id="@+id/thumb_iv"
@@ -17,7 +17,7 @@
         app:layout_constraintEnd_toStartOf="@+id/left_gl"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@+id/title_tv"
-        app:srcCompat="@drawable/ic_meditation_hub" />
+        tools:srcCompat="@drawable/ic_meditation_hub" />
 
     <android.support.constraint.Guideline
         android:id="@+id/left_gl"
@@ -32,9 +32,11 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_gravity="start"
-        android:layout_margin="@dimen/margin_std"
-        android:textSize="24sp"
-        android:transitionName="@string/med_title_transition"
+        android:shadowColor="@android:color/background_light"
+        android:shadowDx="1"
+        android:shadowDy="1"
+        android:shadowRadius="0.6"
+        android:textSize="16sp"
         app:layout_constraintEnd_toStartOf="@+id/right_gl"
         app:layout_constraintStart_toStartOf="@id/left_gl"
         app:layout_constraintTop_toTopOf="parent"
@@ -46,9 +48,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_gravity="start"
-        android:layout_margin="8dp"
         android:textStyle="italic"
-        android:transitionName="@string/med_subtitle_transition"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="@+id/title_tv"
         app:layout_constraintStart_toStartOf="@+id/title_tv"

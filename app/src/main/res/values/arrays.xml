@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="headers">
+        <item>@string/header_foundation</item>
+        <item>@string/header_walk</item>
+        <item>@string/header_botec</item>
+        <item>@string/header_advanced</item>
+    </string-array>
+</resources>

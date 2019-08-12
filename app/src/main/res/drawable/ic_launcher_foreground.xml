@@ -139,6 +139,5 @@
         android:fillColor="#eeff41"
         android:strokeColor="#3f51b5"
         android:fillAlpha="1"/>
-    <!--TODO: last path does not fully fill with yellow!-->
   </group>
 </vector>

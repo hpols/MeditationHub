@@ -1,14 +1,25 @@
 <resources>
-    <string name="app_name">MeditationHub</string>
-    <string name="ContDescrip_download_meditation">Download meditation</string>
-    <string name="download_denied">Please give MeditationHub permission to write to your storage</string>
-    <string name="download_blocked">The writing permission has been blocked. The file cannot be downloaded.</string>
-    <string name="thumb_contDescrip">cover art of the meditation</string>
-    <string name="play_pause_button_contDescrip">play/pause button</string>
-    <string name="stop_button_contDescrip">stop button</string>
-    <string name="download_error">An error occurred downloading the file</string>
-    <string name="med_image_transition">Meditation Image</string>
-    <string name="med_title_transition">Meditation Title</string>
-    <string name="med_subtitle_transition">Meditation Subtitle</string>
-    <string name="background">background</string>
+    <string name="app_name" translatable="true">MeditationHub</string>
+    <string name="ContDescrip_download_meditation" translatable="true">Download meditation</string>
+    <string name="download_denied" translatable="true">Please give MeditationHub permission to write to your storage</string>
+    <string name="download_blocked" translatable="true">The writing permission has been blocked. The file cannot be downloaded.</string>
+    <string name="thumb_contDescrip" translatable="true">cover art of the meditation</string>
+    <string name="play_pause_button_contDescrip" translatable="true">play/pause button</string>
+    <string name="stop_button_contDescrip" translatable="true">stop button</string>
+    <string name="download_error" translatable="true">An error occurred downloading the file</string>
+    <string name="med_image_transition" translatable="true">Meditation Image</string>
+    <string name="med_title_transition" translatable="true">Meditation Title</string>
+    <string name="med_subtitle_transition" translatable="true">Meditation Subtitle</string>
+    <string name="background" translatable="true">background</string>
+    <string name="remove" translatable="true">Remove\u0020</string>
+    <string name="alert_title" translatable="true">Remove %1$s from your device?</string>
+    <string name="alert_cb" translatable="true">Show alert in future</string>
+    <string name="ok" translatable="true">OK</string>
+    <string name="cancel" translatable="true">cancel</string>
+    <string name="remove_contDescrip" translatable="true">remove from device</string>
+
+    <string name="header_foundation">Foundational Meditations</string>
+    <string name="header_walk">Walking Meditations</string>
+    <string name="header_botec">Blessing Of The Energy Centers</string>
+    <string name="header_advanced">Advanced Meditations</string>
 </resources>

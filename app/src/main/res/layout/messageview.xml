@@ -1,36 +1,38 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:orientation="horizontal"
-    android:background="@color/colorPrimaryDark">
+    android:background="@color/colorPrimaryDark"
+    android:orientation="horizontal">
 
     <ImageButton
         android:id="@+id/app_btn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:src="@mipmap/ic_launcher"
-        android:contentDescription="@string/thumb_contDescrip" />
+        android:background="@android:color/transparent"
+        android:contentDescription="@string/thumb_contDescrip"
+        app:srcCompat="@mipmap/ic_launcher" />
 
     <TextView
-        style="@style/text"
         android:id="@+id/title_tv"
-        tools:text="Title Of Meditation"
+        style="@style/text"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
+        android:layout_weight="1"
         android:padding="8dp"
-        android:layout_weight="1"/>
+        tools:text="Title Of Meditation" />
 
     <ImageButton
         android:id="@+id/play_pause_bt"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:background="@android:color/transparent"
-        android:tint="@color/colorAccent"
-        android:padding="8dp"
         android:layout_gravity="center"
+        android:background="@android:color/transparent"
+        android:contentDescription="@string/play_pause_button_contDescrip"
+        android:padding="8dp"
         android:src="@android:drawable/ic_media_pause"
-        android:contentDescription="@string/play_pause_button_contDescrip" />
+        android:tint="@color/colorAccent" />
 
 </LinearLayout>
