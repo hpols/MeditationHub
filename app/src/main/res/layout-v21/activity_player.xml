@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <android.support.constraint.ConstraintLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/media_holder"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -90,5 +90,5 @@
             app:layout_constraintEnd_toStartOf="@+id/duration_tv"
             app:layout_constraintStart_toEndOf="@+id/position_tv" />
 
-    </android.support.constraint.ConstraintLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 </layout>

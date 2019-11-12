@@ -1,12 +1,13 @@
 package com.example.android.meditationhub.model;
 
-import android.arch.persistence.room.ColumnInfo;
-import android.arch.persistence.room.Entity;
-import android.arch.persistence.room.Ignore;
-import android.arch.persistence.room.PrimaryKey;
 import android.os.Parcel;
 import android.os.Parcelable;
-import android.support.annotation.NonNull;
+
+import androidx.annotation.NonNull;
+import androidx.room.ColumnInfo;
+import androidx.room.Entity;
+import androidx.room.Ignore;
+import androidx.room.PrimaryKey;
 
 @Entity(tableName = "meditations")
 public class MeditationLocal implements Parcelable, ItemList, Comparable<MeditationLocal> {
@@ -170,4 +171,5 @@ public class MeditationLocal implements Parcelable, ItemList, Comparable<Meditat
         }
         return getCategory().compareTo(o.getCategory());
     }
+
 }

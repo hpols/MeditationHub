@@ -14,9 +14,10 @@ import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.PowerManager;
-import android.support.v4.app.NotificationCompat;
 import android.view.View;
 import android.widget.RemoteViews;
+
+import androidx.core.app.NotificationCompat;
 
 import com.example.android.meditationhub.BuildConfig;
 import com.example.android.meditationhub.R;
@@ -24,6 +25,9 @@ import com.example.android.meditationhub.util.Constants;
 
 import timber.log.Timber;
 
+/**
+ * Foreground service based on: https://github.com/DimaKoz/Android-Foreground-Service-Example
+ */
 public class MediaPlayerService extends Service implements MediaPlayer.OnErrorListener,
         MediaPlayer.OnPreparedListener, MediaPlayer.OnBufferingUpdateListener{
 

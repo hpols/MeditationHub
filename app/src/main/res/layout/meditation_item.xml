@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/item_cl"
@@ -7,72 +7,72 @@
     android:layout_margin="@dimen/margin_std"
     android:layout_height="wrap_content">
 
-    <ImageView
-        android:id="@+id/thumb_iv"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:contentDescription="@string/thumb_contDescrip"
-        app:layout_constraintBottom_toBottomOf="@+id/subtitle_tv"
-        app:layout_constraintEnd_toStartOf="@+id/left_gl"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/title_tv"
-        tools:srcCompat="@drawable/ic_meditation_hub" />
+        <ImageView
+            android:id="@+id/thumb_iv"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:contentDescription="@string/thumb_contDescrip"
+            app:layout_constraintBottom_toBottomOf="@+id/subtitle_tv"
+            app:layout_constraintEnd_toStartOf="@+id/left_gl"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/title_tv"
+            tools:srcCompat="@drawable/ic_meditation_hub" />
 
-    <android.support.constraint.Guideline
-        android:id="@+id/left_gl"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        app:layout_constraintGuide_percent="0.2" />
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/left_gl"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            app:layout_constraintGuide_percent="0.2" />
 
-    <TextView
-        android:id="@+id/title_tv"
-        style="@style/text.time"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_gravity="start"
-        android:shadowColor="@android:color/background_light"
-        android:shadowDx="1"
-        android:shadowDy="1"
-        android:shadowRadius="0.6"
-        android:textSize="16sp"
-        app:layout_constraintEnd_toStartOf="@+id/right_gl"
-        app:layout_constraintStart_toStartOf="@id/left_gl"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:text="Title of the Meditation" />
+        <TextView
+            android:id="@+id/title_tv"
+            style="@style/text.time"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="start"
+            android:shadowColor="@android:color/background_light"
+            android:shadowDx="1"
+            android:shadowDy="1"
+            android:shadowRadius="0.6"
+            android:textSize="16sp"
+            app:layout_constraintEnd_toStartOf="@+id/right_gl"
+            app:layout_constraintStart_toStartOf="@id/left_gl"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="Title of the Meditation" />
 
-    <TextView
-        android:id="@+id/subtitle_tv"
-        style="@style/text"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_gravity="start"
-        android:textStyle="italic"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="@+id/title_tv"
-        app:layout_constraintStart_toStartOf="@+id/title_tv"
-        app:layout_constraintTop_toBottomOf="@+id/title_tv"
-        tools:text="Subtitle of the Meditation" />
+        <TextView
+            android:id="@+id/subtitle_tv"
+            style="@style/text"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="start"
+            android:textStyle="italic"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="@+id/title_tv"
+            app:layout_constraintStart_toStartOf="@+id/title_tv"
+            app:layout_constraintTop_toBottomOf="@+id/title_tv"
+            tools:text="Subtitle of the Meditation" />
 
-    <ImageButton
-        android:id="@+id/action_ib"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_margin="@dimen/margin_std"
-        android:background="@android:color/transparent"
-        android:contentDescription="@string/ContDescrip_download_meditation"
-        android:tint="@color/colorAccent"
-        app:layout_constraintBottom_toBottomOf="@+id/subtitle_tv"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="@+id/right_gl"
-        app:layout_constraintTop_toTopOf="@+id/title_tv"
-        app:srcCompat="@android:drawable/stat_sys_download" />
+        <ImageButton
+            android:id="@+id/action_ib"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="@dimen/margin_std"
+            android:background="@android:color/transparent"
+            android:contentDescription="@string/ContDescrip_download_meditation"
+            android:tint="@color/colorAccent"
+            app:layout_constraintBottom_toBottomOf="@+id/subtitle_tv"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="@+id/right_gl"
+            app:layout_constraintTop_toTopOf="@+id/title_tv"
+            app:srcCompat="@android:drawable/stat_sys_download" />
 
-    <android.support.constraint.Guideline
-        android:id="@+id/right_gl"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        app:layout_constraintGuide_percent="0.9" />
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/right_gl"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            app:layout_constraintGuide_percent="0.9" />
 
-</android.support.constraint.ConstraintLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

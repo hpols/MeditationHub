@@ -1,15 +1,15 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 28
+    compileSdkVersion 29
     defaultConfig {
         applicationId "com.example.android.meditationhub"
         minSdkVersion 16
         vectorDrawables.useSupportLibrary = true
-        targetSdkVersion 28
+        targetSdkVersion 29
         versionCode 1
         versionName "1.0"
-        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "ACTIVATION_KEY", ACTIVATION_KEY)
     }
     buildTypes {
@@ -23,37 +23,31 @@ android {
 
 dependencies {
 
-    def androidSupportVersion = "28.0.0"
-    def firebaseVersion = "17.0.0"
-    def aac_version = "1.1.1"
-
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation "com.android.support:appcompat-v7:$androidSupportVersion"
-    implementation "com.android.support:recyclerview-v7:$androidSupportVersion"
-    implementation 'com.android.support.constraint:constraint-layout:1.1.3'
-    implementation "com.android.support:cardview-v7:$androidSupportVersion"
-    implementation 'com.android.support:design:28.0.0'
+    implementation 'androidx.appcompat:appcompat:1.1.0'
+    implementation 'androidx.recyclerview:recyclerview:1.0.0'
+    implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
+    implementation 'androidx.cardview:cardview:1.0.0'
+    implementation 'com.google.android.material:material:1.0.0'
     testImplementation 'junit:junit:4.12'
-    androidTestImplementation 'com.android.support.test:runner:1.0.2'
-    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
 
-    //firebase don't update as it requires androidX then
-    implementation 'com.google.firebase:firebase-core:16.0.9'
-    implementation "com.google.firebase:firebase-database:$firebaseVersion"
-    implementation "com.google.firebase:firebase-auth:$firebaseVersion"
-    implementation "com.google.firebase:firebase-storage:$firebaseVersion"
+    //firebase
+    implementation 'com.google.firebase:firebase-core:17.2.1'
+    implementation 'com.google.firebase:firebase-database:19.2.0'
+    implementation 'com.google.firebase:firebase-auth:19.1.0'
+    implementation 'com.google.firebase:firebase-storage:19.1.0'
 
-    //Butterknife & logging
+    //logging
     implementation 'com.jakewharton.timber:timber:4.6.1'
-    implementation 'com.jakewharton:butterknife:8.8.1'
-    annotationProcessor 'com.jakewharton:butterknife-compiler:8.8.1'
 
     //room, liveData & viewModel dependencies
-    implementation "android.arch.persistence.room:runtime:$aac_version"
-    implementation "android.arch.lifecycle:extensions:$aac_version"
-    annotationProcessor "android.arch.lifecycle:compiler:$aac_version"
-    annotationProcessor "android.arch.persistence.room:compiler:$aac_version"
-    testImplementation "android.arch.persistence.room:testing:$aac_version"
+    implementation 'androidx.room:room-runtime:2.2.1'
+    implementation 'androidx.lifecycle:lifecycle-extensions:2.1.0'
+    annotationProcessor 'androidx.lifecycle:lifecycle-compiler:2.1.0'
+    annotationProcessor 'androidx.room:room-compiler:2.2.1'
+    testImplementation 'androidx.room:room-testing:2.2.1'
 
     implementation 'com.nabinbhandari.android:permissions:3.8'//Android Permissions
     implementation 'com.chauthai.swipereveallayout:swipe-reveal-layout:1.4.1' //swipe logic

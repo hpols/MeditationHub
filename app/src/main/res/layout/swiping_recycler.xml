@@ -9,7 +9,7 @@
     app:mode="same_level">
 
     <include layout="@layout/alert_recycler"
-            android:id="@+id/swipe_reveal" />
+        android:id="@+id/swipe_reveal" />
 
     <include layout="@layout/meditation_item"
         android:id="@+id/swipe_main"/>

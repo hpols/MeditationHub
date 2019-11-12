@@ -16,7 +16,7 @@
 
 package com.example.android.meditationhub.player;
 
-import android.support.annotation.IntDef;
+import androidx.annotation.IntDef;
 
 import com.example.android.meditationhub.ui.PlayerActivity;
 

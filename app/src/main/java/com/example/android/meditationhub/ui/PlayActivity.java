@@ -5,14 +5,15 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.databinding.DataBindingUtil;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.support.v7.app.AppCompatActivity;
 import android.view.View;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.databinding.DataBindingUtil;
 
 import com.example.android.meditationhub.BuildConfig;
 import com.example.android.meditationhub.R;
@@ -27,7 +28,7 @@ import timber.log.Timber;
 
 public class PlayActivity extends AppCompatActivity {
 
-    private ActivityPlayerBinding playerBinding;
+    private ActivityPlayerBinding playBinding;
 
     private MeditationLocal selectedMed;
     private Bitmap coverArt;
@@ -43,7 +44,7 @@ public class PlayActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        playerBinding = DataBindingUtil.setContentView(this, R.layout.activity_player);
+        playBinding = DataBindingUtil.setContentView(this, R.layout.activity_player);
 
         if (BuildConfig.DEBUG) {
             Timber.plant(new Timber.DebugTree());
@@ -72,11 +73,11 @@ public class PlayActivity extends AppCompatActivity {
 
     private void initializeUI() {
         //setup the coverArt and titles
-        MedUtils.displayCoverArt(coverArt, playerBinding.thumbIv);
-        playerBinding.titleTv.setText(selectedMed.getTitle());
-        playerBinding.subtitleTv.setText(selectedMed.getSubtitle());
+        MedUtils.displayCoverArt(coverArt, playBinding.thumbIv);
+        playBinding.titleTv.setText(selectedMed.getTitle());
+        playBinding.subtitleTv.setText(selectedMed.getSubtitle());
 
-        playerBinding.playbackControlBt.setPlayListener(new AnimatePlayButton.OnButtonsListener() {
+        playBinding.playbackControlBt.setPlayListener(new AnimatePlayButton.OnButtonsListener() {
             @Override
             public boolean onPlayClick(View view) {
                 mediaPlayerServiceInt = new Intent(PlayActivity.this, MediaPlayerService.class);
