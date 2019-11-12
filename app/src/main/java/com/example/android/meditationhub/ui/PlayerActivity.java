@@ -1,13 +1,17 @@
 package com.example.android.meditationhub.ui;
 
+import android.content.ComponentName;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.databinding.DataBindingUtil;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.view.View;
+import android.util.Log;
 import android.widget.SeekBar;
 
 import com.example.android.meditationhub.BuildConfig;
@@ -15,9 +19,11 @@ import com.example.android.meditationhub.NotificationPanel;
 import com.example.android.meditationhub.R;
 import com.example.android.meditationhub.databinding.ActivityPlayerBinding;
 import com.example.android.meditationhub.model.MeditationLocal;
-import com.example.android.meditationhub.player.MediaPlayerHolder;
+import com.example.android.meditationhub.player.MediaPlayerService;
 import com.example.android.meditationhub.player.PlaybackInfoListener;
 import com.example.android.meditationhub.player.PlayerAdapter;
+import com.example.android.meditationhub.player.PlayerHolder;
+import com.example.android.meditationhub.player.PlayerService;
 import com.example.android.meditationhub.util.Constants;
 import com.example.android.meditationhub.util.MedUtils;
 
@@ -32,11 +38,13 @@ public class PlayerActivity extends AppCompatActivity {
     private Uri medUri;
 
     private int position;
+    private MediaPlayerService mediaPlayerService;
+    private boolean servcieIsBound;
 
     private PlayerAdapter playerAdapter;
     private boolean userIsSeeking = false;
 
-    private MediaPlayerHolder mMediaPlayerHolder;
+    private PlayerHolder playerHolder;
     private NotificationPanel notificationPanel;
     private NotificationPanel.NotificationReceiver notificationReceiver;
 
@@ -55,16 +63,19 @@ public class PlayerActivity extends AppCompatActivity {
 
         //retrieve information from the SaveInstance or Intent depending on the flow
         if (savedInstanceState != null) {
-            position = (int) getSavedInstanceState(savedInstanceState, Constants.PLAYBACK_POS, Constants.SAVED_INT);
-            isPlaying = (boolean) getSavedInstanceState(savedInstanceState, IS_PLAYING, Constants.SAVED_BOO);
-            selectedMed = (MeditationLocal) getSavedInstanceState(savedInstanceState, Constants.SELECTED_MED, Constants.SAVED_PARCEL);
-            coverArt = (Bitmap) getSavedInstanceState(savedInstanceState, Constants.ART, Constants.SAVED_PARCEL);
-            medUri = (Uri) getSavedInstanceState(savedInstanceState, Constants.URI, Constants.SAVED_PARCEL);
+            position = mediaPlayerService.getPosition();
+            isPlaying = (boolean) getSavedInstanceState(savedInstanceState, IS_PLAYING,
+                    Constants.SAVED_BOO);
+            selectedMed = (MeditationLocal) getSavedInstanceState(savedInstanceState,
+                    Constants.SELECTED_MED, Constants.SAVED_PARCEL);
+            coverArt = (Bitmap) getSavedInstanceState(savedInstanceState, Constants.ART,
+                    Constants.SAVED_PARCEL);
+            medUri = (Uri) getSavedInstanceState(savedInstanceState, Constants.URI,
+                    Constants.SAVED_PARCEL);
         } else {
             //retrieve information passed with the intent
             selectedMed = getIntent().getParcelableExtra(Constants.SELECTED_MED);
             medUri = getIntent().getParcelableExtra(Constants.URI);
-            int playAction = getIntent().getIntExtra(Constants.ACTION, Constants.AUTO_PLAY);
 
             coverArt = MedUtils.getCoverArt(medUri, this);
         }
@@ -74,9 +85,9 @@ public class PlayerActivity extends AppCompatActivity {
 
         //setup the player
         initializeUI();
-        initializePlaybackController();
-        initializeSeekbar();
-        initializeSession();
+        //initializePlaybackController();
+        //initializeSeekbar();
+        //initializeSession();
         Timber.d("onCreate: finished");
     }
 
@@ -106,7 +117,6 @@ public class PlayerActivity extends AppCompatActivity {
      * and media controller.
      */
     private void initializeSession() {
-        setDNDmode();
 
         MediaSessionCompat mediaSession = new MediaSessionCompat(this, getLocalClassName());
 
@@ -128,14 +138,10 @@ public class PlayerActivity extends AppCompatActivity {
         mediaSession.setActive(true);
     }
 
-    private void setDNDmode() {
-
-    }
-
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        outState.putInt(Constants.PLAYBACK_POS, mMediaPlayerHolder.getPosition());
+        outState.putInt(Constants.PLAYBACK_POS, mediaPlayerService.getPosition());
         outState.putBoolean(IS_PLAYING, isPlaying);
         outState.putParcelable(Constants.SELECTED_MED, selectedMed);
         outState.putParcelable(Constants.ART, coverArt);
@@ -145,51 +151,134 @@ public class PlayerActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        playerAdapter.loadMedia(medUri);
-        if (isPlaying) {
-            playerAdapter.play();
-            setupReceiver();
-        }
+//        final int delay = MedUtils.getDelay(this);
+//        if (delay != 0 && position == 0 && isPlaying) { //add delay audio if requested in settings
+//            Uri delayAudio = Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE +
+//                    File.pathSeparator + File.separator + getPackageName() + R.raw.forest_murmur);
+//            playerAdapter.loadMedia(delayAudio);
+//
+//            //start randomly so that the background sound is not always the same
+//            int randomStart = new Random().nextInt(playerAdapter.getDuration() - delay);
+//            playerAdapter.seekTo(randomStart);
+//
+//            //play for the set time and then move on to the meditation
+//            new Handler().postDelayed(new Runnable() {
+//                public void run() {
+//                    playerAdapter.release();
+//                    playerAdapter.loadMedia(medUri);
+//                    startService(new Intent(PlayerActivity.this, PlayerService.class));
+//                    //playerAdapter.play();
+//                    setupReceiver();
+//                }
+//            }, delay * 1000);   //delay * 1000 (for mili)
+//        } else {
+//            Intent mediaLoader = new Intent(this, PlayerService.class);
+//            mediaLoader.putExtra(Constants.URI, medUri);
+//            mediaLoader.putExtra(Constants.SERVICE_ID, Constants.LOADER_ID);
+//            startService(mediaLoader);
+//            playerAdapter.loadMedia(medUri);
+//            if (isPlaying) {
+//                startService(new Intent(this, PlayerService.class));
+//                setupReceiver();
+//            }
+//        }
         Timber.d("onStart: create MediaPlayer");
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        mMediaPlayerHolder.setPlaybackInfoListener(null);
-        position = mMediaPlayerHolder.getPosition();
-        playerAdapter.release();
-        unregisterReceiver(notificationReceiver);
-        Timber.d("onStop: release MediaPlayer");
+//        playerHolder.setPlaybackInfoListener(null);
+//        playerHolder.handleAlerts(PlayerHolder.TURN_ON_ALL_ALERTS);
+//        position = playerHolder.getPosition();
+//        stopService(new Intent(this, PlayerService.class));
+//        //playerAdapter.release();
+//        //unregisterReceiver(notificationReceiver);
+//        Timber.d("onStop: release MediaPlayer");
     }
 
     private void initializeUI() {
-
         playerBinding.titleTv.setText(selectedMed.getTitle());
         playerBinding.subtitleTv.setText(selectedMed.getSubtitle());
 
-        playerBinding.playPauseBt.setImageResource(MedUtils.getPlaybackControl());
-        playerBinding.stopBt.setOnClickListener(
-                new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        resetPlayback();
-                    }
-                });
-        playerBinding.playPauseBt.setOnClickListener(
-                new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        if (isPlaying) {
-                            pausePlayback();
-                        } else {
-                            startPlayback();
-                            setupReceiver();
-                        }
-
-                    }
-                });
+//        playerBinding.playPauseBt.setImageResource(MedUtils.getPlaybackControl());
+//        playerBinding.stopBt.setOnClickListener(
+//                new View.OnClickListener() {
+//                    @Override
+//                    public void onClick(View view) {
+//                        resetPlayback();
+//                    }
+//                });
+//        playerBinding.playPauseBt.setOnClickListener(
+//                new View.OnClickListener() {
+//                    @Override
+//                    public void onClick(View view) {
+//                        final int lState = MediaPlayerService.getState();
+//                        if (lState == Constants.STATE_SERVICE.STATE_NOT_INIT) {
+//
+//                            Intent startIntent = new Intent(view.getContext(), MediaPlayerService.class);
+//                            startIntent.setAction(Constants.START_ACTION);
+//                            startIntent.putExtra(Constants.URI, medUri);
+//                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+//                                startForegroundService(startIntent);
+//                            } else {
+//                                startService(startIntent);
+//                            }
+//
+//
+//                            Intent serviceBindIntent =  new Intent(PlayerActivity.this, MediaPlayerService.class);
+//                            bindService(serviceBindIntent, serviceConnection, Context.BIND_AUTO_CREATE);
+//                        } else if (lState == Constants.STATE_SERVICE.STATE_PREPARE ||
+//                                lState == Constants.STATE_SERVICE.STATE_PLAY) {
+//                            Intent lPauseIntent = new Intent(view.getContext(), MediaPlayerService.class);
+//                            lPauseIntent.setAction(Constants.PAUSE_ACTION);
+//                            PendingIntent lPendingPauseIntent = PendingIntent.getService(view.getContext(),
+//                                    0, lPauseIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+//                            try {
+//                                lPendingPauseIntent.send();
+//                            } catch (PendingIntent.CanceledException e) {
+//                                e.printStackTrace();
+//                            }
+//                        } else if (lState == Constants.STATE_SERVICE.STATE_PAUSE) {
+//
+//                            Intent lPauseIntent = new Intent(view.getContext(), MediaPlayerService.class);
+//                            lPauseIntent.setAction(Constants.PLAY_ACTION);
+//                            PendingIntent lPendingPauseIntent = PendingIntent.getService(view.getContext(),
+//                                    0, lPauseIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+//                            try {
+//                                lPendingPauseIntent.send();
+//                            } catch (PendingIntent.CanceledException e) {
+//                                e.printStackTrace();
+//                            }
+//                        }
+//
+//                        playerBinding.playPauseBt.setImageResource(MedUtils.getPlaybackControl());
+//
+////                        if (isPlaying) {
+////                            pausePlayback();
+////                        } else {
+////                            startPlayback();
+////                            setupReceiver();
+////                        }
+//                    }
+//                });
     }
+
+    private ServiceConnection serviceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName className, IBinder iBinder) {
+            Log.d("PlayerActivity", "ServiceConnection: connected to service.");
+            // We've bound to MyService, cast the IBinder and get MyBinder instance
+            MediaPlayerService.MyBinder binder = (MediaPlayerService.MyBinder) iBinder;
+            mediaPlayerService = binder.getService();
+            servcieIsBound = true;
+        }
+        @Override
+        public void onServiceDisconnected(ComponentName arg0) {
+            Log.d("PlayerActivity", "ServiceConnection: disconnected from service.");
+            servcieIsBound = false;
+        }
+    };
 
     private void setupReceiver() {
         notificationPanel = new NotificationPanel(PlayerActivity.this,
@@ -201,12 +290,14 @@ public class PlayerActivity extends AppCompatActivity {
     }
 
     public void startPlayback() {
-        playerAdapter.play();
+        startService(new Intent(this, PlayerService.class));
+        //playerAdapter.play();
         isPlaying = true;
     }
 
     private void resetPlayback() {
-        playerAdapter.reset();
+        stopService(new Intent(this, PlayerService.class));
+        //playerAdapter.reset();
         position = 0;
         notificationPanel.notificationCancel();
 
@@ -218,17 +309,16 @@ public class PlayerActivity extends AppCompatActivity {
     }
 
     private void initializePlaybackController() {
-        mMediaPlayerHolder = new MediaPlayerHolder(this);
-        Timber.d("initializePlaybackController: created MediaPlayerHolder");
-        mMediaPlayerHolder.setPlaybackInfoListener(new PlaybackListener());
-        playerAdapter = mMediaPlayerHolder;
+        playerHolder = new PlayerHolder(this, this);
+        Timber.d("initializePlaybackController: created PlayerHolder");
+        playerHolder.setPlaybackInfoListener(new PlaybackListener());
+        playerAdapter = playerHolder;
         if (position != 0) {
-            mMediaPlayerHolder.setPosition(position);
+            playerHolder.setPosition(position);
         }
-        Timber.d("initializePlaybackController: MediaPlayerHolder progress callback set");
+        Timber.d("initializePlaybackController: PlayerHolder progress callback set");
     }
 
-    //TODO: Seeker is not updating
     private void initializeSeekbar() {
         playerBinding.progressSb.setOnSeekBarChangeListener(
                 new SeekBar.OnSeekBarChangeListener() {
@@ -260,7 +350,7 @@ public class PlayerActivity extends AppCompatActivity {
         public void onDurationChanged(int duration) {
             playerBinding.progressSb.setMax(duration);
 
-            String displayDuration = MedUtils.getDisplayTime(duration, false, MedUtils.CONVERT_DURATION);
+            String displayDuration = MedUtils.getDisplayTime(duration, false, Constants.CONVERT_DURATION);
             playerBinding.durationTv.setText(displayDuration);
             Timber.d("Playback duration: " + displayDuration);
         }
@@ -269,7 +359,7 @@ public class PlayerActivity extends AppCompatActivity {
         public void onPositionChanged(int position) {
             if (!userIsSeeking) {
                 playerBinding.progressSb.setProgress(position);
-                String displayPosition = MedUtils.getDisplayTime(position, displayHours, MedUtils.CONVERT_POSITION);
+                String displayPosition = MedUtils.getDisplayTime(position, displayHours, Constants.CONVERT_POSITION);
                 playerBinding.positionTv.setText(displayPosition);
                 Timber.d("setPlaybackPosition: setProgress " + displayPosition);
             }
@@ -299,7 +389,15 @@ public class PlayerActivity extends AppCompatActivity {
         @Override
         public void onPause() {
             isPlaying = false;
-            mMediaPlayerHolder.setPosition(position);
+            playerHolder.setPosition(position);
         }
+    }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        stopService(new Intent(this, PlayerService.class));
+        playerAdapter.release();
+        finish();
     }
 }

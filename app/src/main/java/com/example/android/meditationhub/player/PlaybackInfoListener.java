@@ -24,7 +24,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 /**
- * Allows {@link MediaPlayerHolder} to report media playback duration and progress updates to
+ * Allows {@link PlayerHolder} to report media playback duration and progress updates to
  * the {@link PlayerActivity}.
  */
 public abstract class PlaybackInfoListener {

@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/item_cl"
     android:layout_width="match_parent"
+    android:layout_margin="@dimen/margin_std"
     android:layout_height="wrap_content">
 
     <ImageView
@@ -47,7 +48,6 @@
         android:layout_height="wrap_content"
         android:layout_gravity="start"
         android:textStyle="italic"
-
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="@+id/title_tv"
         app:layout_constraintStart_toStartOf="@+id/title_tv"

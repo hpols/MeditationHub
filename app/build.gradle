@@ -37,7 +37,7 @@ dependencies {
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
 
-    //firebase
+    //firebase don't update as it requires androidX then
     implementation 'com.google.firebase:firebase-core:16.0.9'
     implementation "com.google.firebase:firebase-database:$firebaseVersion"
     implementation "com.google.firebase:firebase-auth:$firebaseVersion"
@@ -57,6 +57,7 @@ dependencies {
 
     implementation 'com.nabinbhandari.android:permissions:3.8'//Android Permissions
     implementation 'com.chauthai.swipereveallayout:swipe-reveal-layout:1.4.1' //swipe logic
+    implementation 'com.github.SwiftyWang:AnimatePlayButton:1.4' //play_pause_stop button
 }
 
 apply plugin: 'com.google.gms.google-services' //firebase

@@ -16,10 +16,15 @@
 
 package com.example.android.meditationhub.player;
 
+import android.app.Activity;
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
+import android.preference.PreferenceManager;
 
+import com.example.android.meditationhub.R;
 import com.example.android.meditationhub.ui.PlayerActivity;
 
 import java.util.concurrent.Executors;
@@ -32,11 +37,12 @@ import timber.log.Timber;
  * Exposes the functionality of the {@link MediaPlayer} and implements the {@link PlayerAdapter}
  * so that {@link PlayerActivity} can control music playback.
  */
-public final class MediaPlayerHolder implements PlayerAdapter {
+public final class PlayerHolder implements PlayerAdapter {
 
     private static final int PLAYBACK_POSITION_REFRESH_INTERVAL_MS = 1000;
 
     private final Context ctxt;
+    private final Activity activity;
     private MediaPlayer mediaPlayer;
     private Uri audioUri;
     private PlaybackInfoListener playbackInfoListener;
@@ -45,8 +51,12 @@ public final class MediaPlayerHolder implements PlayerAdapter {
 
     private int currentPosition;
 
-    public MediaPlayerHolder(Context ctxt) {
+    public static final boolean TURN_OFF_ALL_ALERTS = true;
+    public static final boolean TURN_ON_ALL_ALERTS = false;
+
+    public PlayerHolder(Context ctxt, Activity activity) {
         this.ctxt = ctxt.getApplicationContext();
+        this.activity = activity;
     }
 
     /**
@@ -62,7 +72,7 @@ public final class MediaPlayerHolder implements PlayerAdapter {
             mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                 @Override
                 public void onCompletion(MediaPlayer mediaPlayer) {
-                    stopUpdatingCallbackWithPosition(true);
+                    stopUpdatingCallbackWithPosition();
                     if (playbackInfoListener != null) {
                         playbackInfoListener.onStateChanged(PlaybackInfoListener.State.COMPLETED);
                         playbackInfoListener.onPlaybackCompleted();
@@ -82,8 +92,7 @@ public final class MediaPlayerHolder implements PlayerAdapter {
         this.audioUri = audioUri;
         String audioSource = audioUri.toString();
         String[] separated = audioSource.split("//");
-        String audioAsFile = "File://"+ separated[1];
-        Uri audioFile = Uri.parse(audioAsFile);
+        String audioAsFile = "File://" + separated[1];
         initializeMediaPlayer();
 
         try {
@@ -106,6 +115,7 @@ public final class MediaPlayerHolder implements PlayerAdapter {
         if (mediaPlayer != null) {
             mediaPlayer.release();
             mediaPlayer = null;
+            handleAlerts(TURN_ON_ALL_ALERTS);
         }
     }
 
@@ -125,11 +135,12 @@ public final class MediaPlayerHolder implements PlayerAdapter {
             if (playbackInfoListener != null) {
                 playbackInfoListener.onStateChanged(PlaybackInfoListener.State.PLAYING);
 
-                if(currentPosition != 0) {
+                if (currentPosition != 0) {
                     mediaPlayer.seekTo(currentPosition);
                 }
             }
             startUpdatingCallbackWithPosition();
+            handleAlerts(TURN_OFF_ALL_ALERTS);
         }
     }
 
@@ -143,7 +154,7 @@ public final class MediaPlayerHolder implements PlayerAdapter {
                 playbackInfoListener.onStateChanged(PlaybackInfoListener.State.RESET);
                 currentPosition = 0;
             }
-            stopUpdatingCallbackWithPosition(true);
+            stopUpdatingCallbackWithPosition();
         }
     }
 
@@ -166,6 +177,11 @@ public final class MediaPlayerHolder implements PlayerAdapter {
         }
     }
 
+    @Override
+    public int getDuration() {
+        return mediaPlayer.getDuration();
+    }
+
     private void startUpdatingCallbackWithPosition() {
         if (executorService == null) {
             executorService = Executors.newSingleThreadScheduledExecutor();
@@ -173,12 +189,16 @@ public final class MediaPlayerHolder implements PlayerAdapter {
             executorService.scheduleAtFixedRate(new Runnable() {
 
                 @Override
-                public void run(){
+                public void run() {
                     try {
-                        updateProgressCallbackTask();
+                        activity.runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                updateProgressCallbackTask();
+                            }
+                        });
                     } catch (Exception e) {
-                        Timber.e("Exception from Playback position update: " +e );
-                        //TODO: E/MediaPlayerHolder: Exception from Playback position update: android.view.ViewRootImpl$CalledFromWrongThreadException: Only the original thread that created a view hierarchy can touch its views.
+                        Timber.e("Exception from Playback position update: " + e);
                     }
 
                 }
@@ -186,12 +206,12 @@ public final class MediaPlayerHolder implements PlayerAdapter {
         }
     }
 
-    private void stopUpdatingCallbackWithPosition(boolean resetUIPlaybackPosition) {
+    private void stopUpdatingCallbackWithPosition() {
         if (executorService != null) {
             executorService.shutdownNow();
             executorService = null;
             runnableSeekbarUpdate = null;
-            if (resetUIPlaybackPosition && playbackInfoListener != null) {
+            if (playbackInfoListener != null) {
                 playbackInfoListener.onPositionChanged(0);
             }
         }
@@ -221,5 +241,40 @@ public final class MediaPlayerHolder implements PlayerAdapter {
 
     public void setPosition(int position) {
         this.currentPosition = position;
+    }
+
+    public void handleAlerts(boolean activation) {
+
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(ctxt);
+        boolean Dnd = sharedPref.getBoolean(ctxt.getString(R.string.pref_dnd_switch_key), false);
+
+        if (Dnd) {
+            AudioManager auMan;
+            auMan = (AudioManager) ctxt.getSystemService(Context.AUDIO_SERVICE);
+
+            String timberText;
+            if (activation == TURN_OFF_ALL_ALERTS) {
+                timberText = "turned off";
+                //turn ringer silent
+                auMan.setRingerMode(AudioManager.RINGER_MODE_SILENT);
+            } else {
+                timberText = "turned on";
+                auMan.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
+            }
+            Timber.i("RINGER is " + timberText);
+
+            //turn off sound, disable notifications
+            auMan.setStreamMute(AudioManager.STREAM_SYSTEM, activation);
+            Timber.i("STREAM_SYSTEM" + timberText);
+            //notifications
+            auMan.setStreamMute(AudioManager.STREAM_NOTIFICATION, activation);
+            Timber.i("STREAM_NOTIFICATION" + timberText);
+            //alarm
+            auMan.setStreamMute(AudioManager.STREAM_ALARM, activation);
+            Timber.i("STREAM_ALARM" + timberText);
+            //ringer
+            auMan.setStreamMute(AudioManager.STREAM_RING, activation);
+            Timber.i("STREAM_RING" + timberText);
+        }
     }
 }

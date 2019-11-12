@@ -22,4 +22,12 @@
     <string name="header_walk">Walking Meditations</string>
     <string name="header_botec">Blessing Of The Energy Centers</string>
     <string name="header_advanced">Advanced Meditations</string>
+    <string name="title_activity_settings">SettingsActivity</string>
+    <string name="menu_title_settings">Settings</string>
+    <string name="pref_key_time_delay">Time Delay Key</string>
+    <string name="pref_default_time_delay">0</string>
+    <string name="pref_dnd_switch_key">DND Switch Key</string>
+
+
+    <string name="text_value_radio_notification" translatable="false">Radio</string>
 </resources>

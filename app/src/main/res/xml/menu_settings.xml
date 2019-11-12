@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:auto="http://schemas.android.com/apk/res-auto">
+
+    <EditTextPreference
+        android:defaultValue="@string/pref_default_time_delay"
+        android:key="@string/pref_key_time_delay"
+        android:selectAllOnFocus="true"
+        android:singleLine="true"
+        android:title="Delay start of meditation (in seconds)"
+        android:inputType="number"/>
+
+    <SwitchPreference
+        android:defaultValue="false"
+        android:key="@string/pref_dnd_switch_key"
+        android:title="Turn off all alerts when meditation is in progress"
+        android:summaryOff="All alerts will go off as normal"
+        android:summaryOn="All alerts will be silenced during your meditation"
+        />
+</PreferenceScreen>

@@ -15,9 +15,9 @@
             android:layout_height="wrap_content"
             android:adjustViewBounds="true"
             android:contentDescription="@string/thumb_contDescrip"
-            android:scaleType="fitCenter"
             android:fadingEdge="horizontal|vertical"
             android:fadingEdgeLength="20dp"
+            android:scaleType="fitCenter"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -36,35 +36,26 @@
         <TextView
             android:id="@+id/subtitle_tv"
             style="@style/text"
-            android:textStyle="italic"
             android:textSize="20sp"
+            android:textStyle="italic"
             app:layout_constraintBottom_toTopOf="@+id/progress_sb"
             app:layout_constraintEnd_toEndOf="@+id/title_tv"
             app:layout_constraintStart_toStartOf="@+id/title_tv"
             tools:text="Subtitle of the Meditation" />
 
-        <ImageButton
-            android:id="@+id/play_pause_bt"
-            style="@style/button"
-            android:contentDescription="@string/play_pause_button_contDescrip"
-            android:src="@android:drawable/ic_media_play"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@+id/stop_bt"
-            app:layout_constraintHorizontal_chainStyle="packed"
-            app:layout_constraintStart_toStartOf="@+id/progress_sb" />
-
-        <ImageButton
-            android:id="@+id/stop_bt"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
+        <com.swifty.animateplaybutton.AnimatePlayButton
+            android:id="@+id/playback_control_bt"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
             android:layout_margin="@dimen/margin_std"
-            android:layout_marginBottom="8dp"
-            android:background="@color/colorAccent"
-            android:contentDescription="@string/stop_button_contDescrip"
-            app:layout_constraintBottom_toBottomOf="@+id/play_pause_bt"
-            app:layout_constraintEnd_toEndOf="@+id/progress_sb"
-            app:layout_constraintStart_toEndOf="@+id/play_pause_bt"
-            app:layout_constraintTop_toTopOf="@+id/play_pause_bt" />
+            app:ap_animation_duration="250"
+            app:ap_border_color="@color/colorPrimary"
+            app:ap_button_background="@drawable/circle_primary_bg"
+            app:ap_button_color="@color/colorAccent"
+            app:ap_button_size="60dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/duration_tv"
+            app:layout_constraintStart_toEndOf="@+id/position_tv" />
 
         <TextView
             android:id="@+id/position_tv"
@@ -91,7 +82,7 @@
             android:layout_height="32dp"
             android:layout_margin="@dimen/margin_std"
             android:layout_weight="1"
-            app:layout_constraintBottom_toTopOf="@+id/play_pause_bt"
+            app:layout_constraintBottom_toTopOf="@+id/playback_control_bt"
             app:layout_constraintEnd_toStartOf="@+id/duration_tv"
             app:layout_constraintStart_toEndOf="@+id/position_tv" />
 

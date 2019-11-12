@@ -1,14 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:android="http://schemas.android.com/apk/res/android">
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
+    <item
+        android:id="@+id/menu_settings"
+        android:orderInCategory="1"
+        android:title="@string/menu_title_settings"
+        app:showAsAction="never" />
+    
     <item
         android:id="@+id/login_menu"
         android:title="Login" />
     <item
         android:id="@+id/logout_menu"
         android:title="Logout" />
-    <item
-        android:id="@+id/uri_add"
-        android:title="Update WalkMed4"/>
+
 </menu>

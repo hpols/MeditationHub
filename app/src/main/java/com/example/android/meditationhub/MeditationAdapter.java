@@ -33,7 +33,7 @@ import com.example.android.meditationhub.model.Header;
 import com.example.android.meditationhub.model.ItemList;
 import com.example.android.meditationhub.model.MeditationLocal;
 import com.example.android.meditationhub.model.MeditationLocalDb;
-import com.example.android.meditationhub.ui.PlayerActivity;
+import com.example.android.meditationhub.ui.PlayActivity;
 import com.example.android.meditationhub.util.Constants;
 import com.example.android.meditationhub.util.MedUtils;
 import com.google.android.gms.tasks.OnFailureListener;
@@ -230,7 +230,7 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
     }
 
     private void goToPlayer(MeditationLocal selectedMed, Uri medUri, ImageView thumbIv) {
-        Intent openPlayer = new Intent(ctxt, PlayerActivity.class);
+        Intent openPlayer = new Intent(ctxt, PlayActivity.class);
         openPlayer.putExtra(Constants.SELECTED_MED, selectedMed);
         openPlayer.putExtra(Constants.URI, medUri);
 

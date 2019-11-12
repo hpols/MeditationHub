@@ -1,10 +1,14 @@
 package com.example.android.meditationhub.util;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.MediaMetadataRetriever;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
+import android.preference.PreferenceManager;
 import android.widget.ImageView;
 
 import com.example.android.meditationhub.R;
@@ -14,8 +18,21 @@ import java.util.Locale;
 
 public class MedUtils {
 
-    public static final int CONVERT_DURATION = 0;
-    public static final int CONVERT_POSITION = 1;
+    static SharedPreferences sharedPref;
+    static SharedPreferences.Editor sharedPrefEd;
+
+    public static boolean isInternetAvailable(Context pContext) {
+        if (pContext == null) {
+            return false;
+        }
+        ConnectivityManager cm =
+                (ConnectivityManager) pContext.getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+
+        return activeNetwork != null &&
+                activeNetwork.isConnectedOrConnecting();
+    }
 
     public static void displayCoverArt(Bitmap coverArt, ImageView imageView) {
         if (coverArt != null) {
@@ -70,5 +87,13 @@ public class MedUtils {
             image =  android.R.drawable.ic_media_play;
         }
         return image;
+    }
+
+    public static int getDelay(Context ctxt) {
+        sharedPref = PreferenceManager.getDefaultSharedPreferences(ctxt);
+        String delayString =
+                sharedPref.getString(ctxt.getResources().getString(R.string.pref_key_time_delay),
+                        ctxt.getResources().getString(R.string.pref_default_time_delay));
+        return Integer.parseInt(delayString);
     }
 }

@@ -21,7 +21,7 @@ import android.net.Uri;
 import com.example.android.meditationhub.ui.PlayerActivity;
 
 /**
- * Allows {@link PlayerActivity} to control media playback of {@link MediaPlayerHolder}.
+ * Allows {@link PlayerActivity} to control media playback of {@link PlayerHolder}.
  */
 public interface PlayerAdapter {
 
@@ -40,4 +40,7 @@ public interface PlayerAdapter {
     void initializeProgressCallback();
 
     void seekTo(int position);
+
+    int getDuration();
+
 }

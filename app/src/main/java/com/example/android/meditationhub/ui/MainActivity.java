@@ -29,6 +29,7 @@ import android.widget.TextView;
 import com.example.android.meditationhub.BuildConfig;
 import com.example.android.meditationhub.MeditationAdapter;
 import com.example.android.meditationhub.R;
+import com.example.android.meditationhub.SettingsActivity;
 import com.example.android.meditationhub.databinding.ActivityMainBinding;
 import com.example.android.meditationhub.model.Header;
 import com.example.android.meditationhub.model.ItemList;
@@ -149,9 +150,6 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
                 prevCategory = currCategory;
             }
         }
-        for (int j = 0; j < items.size(); j++) {
-            Timber.v("Item: "+ j + " is " + items.get(j).toString());
-        }
     }
 
     @Override
@@ -231,6 +229,9 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
                 fireAuth.signOut();
                 invalidateOptionsMenu();
                 MeditationAdapter.logout();
+                return true;
+            case R.id.menu_settings:
+                startActivity(new Intent(this, SettingsActivity.class));
                 return true;
         }
         return super.onOptionsItemSelected(item);
