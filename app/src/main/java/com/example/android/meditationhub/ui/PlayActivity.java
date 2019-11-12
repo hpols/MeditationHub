@@ -152,9 +152,7 @@ public class PlayActivity extends AppCompatActivity {
         return null;
     }
 
-    /**
-     * monitor state of the service
-     */
+    //monitor state of the service
     private ServiceConnection mediaPlayerConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
@@ -169,9 +167,7 @@ public class PlayActivity extends AppCompatActivity {
         }
     };
 
-    /**
-     * unbind service so the audio continues to play
-     */
+    //unbind service so the audio continues to play
     private void unbindMediaPlayerService() {
         unbindService(mediaPlayerConnection);
         serviceIsBound = false;
