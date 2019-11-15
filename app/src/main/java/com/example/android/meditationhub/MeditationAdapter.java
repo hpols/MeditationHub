@@ -24,6 +24,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.cardview.widget.CardView;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.content.FileProvider;
 import androidx.recyclerview.widget.RecyclerView;
@@ -300,7 +301,7 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
         //@BindView(R.id.swipe_reveal)
         ConstraintLayout swipeReveal;
         //@BindView(R.id.swipe_main)
-        ConstraintLayout swipeMain;
+        CardView swipeMain;
         //@BindView(R.id.alert_ok_bt)
         Button okBt;
         //@BindView(R.id.alert_cancel_bt)

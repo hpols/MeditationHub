@@ -21,6 +21,12 @@ public class MedUtils {
     static SharedPreferences sharedPref;
     static SharedPreferences.Editor sharedPrefEd;
 
+    public static int noOfCols(Context ctxt) {
+        int screenWidth = ctxt.getResources().getConfiguration().screenWidthDp;
+
+        return Math.round(screenWidth / 180);
+    }
+
     public static boolean isInternetAvailable(Context pContext) {
         if (pContext == null) {
             return false;
@@ -28,6 +34,7 @@ public class MedUtils {
         ConnectivityManager cm =
                 (ConnectivityManager) pContext.getSystemService(Context.CONNECTIVITY_SERVICE);
 
+        assert cm != null;
         NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
 
         return activeNetwork != null &&
@@ -45,9 +52,9 @@ public class MedUtils {
     public static String getDisplayTime(int millis, boolean displayHours, int convert) {
         StringBuffer buf = new StringBuffer();
 
-        int hours = millis / (1000*60*60);
-        int minutes = ( millis % (1000*60*60) ) / (1000*60);
-        int seconds = ( ( millis % (1000*60*60) ) % (1000*60) ) / 1000;
+        int hours = millis / (1000 * 60 * 60);
+        int minutes = (millis % (1000 * 60 * 60)) / (1000 * 60);
+        int seconds = ((millis % (1000 * 60 * 60)) % (1000 * 60)) / 1000;
 
         buf
                 .append(String.format(Locale.getDefault(), "%02d", hours))
@@ -84,7 +91,7 @@ public class MedUtils {
         if (PlayerActivity.isPlaying) {
             image = android.R.drawable.ic_media_pause;
         } else {
-            image =  android.R.drawable.ic_media_play;
+            image = android.R.drawable.ic_media_play;
         }
         return image;
     }

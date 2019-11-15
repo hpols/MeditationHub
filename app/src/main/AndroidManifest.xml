@@ -19,7 +19,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         tools:ignore="GoogleAppIndexingWarning">
-        <activity android:name=".ui.PlayActivity"></activity>
+        <activity android:name=".ui.PlayActivity"/>
 
         <service android:name=".player.MediaPlayerService" />
         <service android:name=".player.PlayerService" />

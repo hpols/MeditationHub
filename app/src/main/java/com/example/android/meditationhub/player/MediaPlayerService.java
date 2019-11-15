@@ -96,6 +96,7 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
         Timber.d("onCreate()");
         stateService = Constants.STATE_NOT_INIT;
         notMan = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+
     }
 
     @Override

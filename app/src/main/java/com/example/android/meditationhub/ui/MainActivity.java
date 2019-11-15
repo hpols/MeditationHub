@@ -1,30 +1,30 @@
 package com.example.android.meditationhub.ui;
 
 import android.app.DownloadManager;
-import androidx.lifecycle.Observer;
-import androidx.lifecycle.ViewModelProviders;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
-import androidx.databinding.DataBindingUtil;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.preference.PreferenceManager;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import com.google.android.material.snackbar.Snackbar;
-import androidx.core.content.FileProvider;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.LinearLayoutManager;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.FileProvider;
+import androidx.databinding.DataBindingUtil;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProviders;
+import androidx.recyclerview.widget.GridLayoutManager;
 
 import com.example.android.meditationhub.BuildConfig;
 import com.example.android.meditationhub.MeditationAdapter;
@@ -38,6 +38,8 @@ import com.example.android.meditationhub.model.MeditationLocal;
 import com.example.android.meditationhub.model.MeditationLocalDb;
 import com.example.android.meditationhub.model.MeditationLocalViewModel;
 import com.example.android.meditationhub.util.EntryExecutor;
+import com.example.android.meditationhub.util.MedUtils;
+import com.google.android.material.snackbar.Snackbar;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
@@ -123,15 +125,28 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
             public void onChanged(@Nullable List<MeditationLocal> meditationLocals) {
                 Timber.d("Updating entries from LiveData in ViewModel");
                 createOrderedItemList(meditationLocals);
+
                 medAdapter = new MeditationAdapter(MainActivity.this, fireAuth, items,
                         MainActivity.this);
-                mainBinding.meditationListRv.setLayoutManager(
-                        new LinearLayoutManager(MainActivity.this));
-                mainBinding.meditationListRv.setAdapter(medAdapter);
-//                ItemTouchHelper itemTouchHelper = new
-//                        ItemTouchHelper(new SwipeToDeleteCallback(medAdapter,
-//                        MainActivity.this, showAlert));
-//                itemTouchHelper.attachToRecyclerView(mainBinding.meditationListRv);
+
+                final int numOfCol = MedUtils.noOfCols(MainActivity.this);
+                GridLayoutManager layoutMan = new GridLayoutManager(MainActivity.this,
+                        numOfCol);
+                layoutMan.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
+                    @Override
+                    public int getSpanSize(int position) {
+                        switch(medAdapter.getItemViewType(position)){
+                            case ItemList.TYPE_HEADER:
+                                return numOfCol;
+                            case ItemList.TYPE_ITEM:
+                            default:
+                                return 1;
+                        }
+                    }
+                });
+
+                mainBinding.meditationRv.setLayoutManager(layoutMan);
+                mainBinding.meditationRv.setAdapter(medAdapter);
             }
         });
     }
@@ -257,7 +272,7 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
         // see https://www.dev2qa.com/android-snackbar-example/
         View customView = getLayoutInflater().inflate(R.layout.download_prog, null);
         TextView snackMes = customView.findViewById(R.id.snackbar_text);
-        snackMes.setText("Downloading: "+ selectedMed.getTitle());
+        snackMes.setText("Downloading: " + selectedMed.getTitle());
         final ProgressBar snackProg = customView.findViewById(R.id.circularProgressbar);
         snackProg.setMax(0);
         snackProg.setMax(100);
@@ -413,7 +428,7 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
 //            AlertDialog alertDialog = alertBuild.create();
 //            alertDialog.show();
 //        } else {//directly call the move method, alert is no longer needed.
-            removeFile(medPos, selectedMed);
+        removeFile(medPos, selectedMed);
 //        }
     }
 

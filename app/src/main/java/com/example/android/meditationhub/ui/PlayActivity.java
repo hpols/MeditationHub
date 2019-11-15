@@ -196,7 +196,6 @@ public class PlayActivity extends AppCompatActivity {
         outState.putParcelable(Constants.ART, coverArt);
         outState.putParcelable(Constants.URI, medUri);
 
-        unbindMediaPlayerService();
         Timber.v("all outstates saved");
     }
 
@@ -205,6 +204,14 @@ public class PlayActivity extends AppCompatActivity {
         super.onStart();
         if (MediaPlayerService.getState() != Constants.STATE_NOT_INIT) {
             bindMediaPlayerService();
+        }
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (MediaPlayerService.getState() != Constants.STATE_NOT_INIT) {
+            unbindMediaPlayerService();
         }
     }
 
