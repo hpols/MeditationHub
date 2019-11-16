@@ -1,13 +1,13 @@
-package com.example.android.meditationhub;
+package com.example.android.meditationhub.ui;
 
-import androidx.databinding.DataBindingUtil;
 import android.os.Bundle;
-import androidx.appcompat.app.AppCompatActivity;
 import android.view.MenuItem;
 
-import com.example.android.meditationhub.databinding.ActivitySettingsBinding;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.databinding.DataBindingUtil;
 
-import timber.log.Timber;
+import com.example.android.meditationhub.R;
+import com.example.android.meditationhub.databinding.ActivitySettingsBinding;
 
 public class SettingsActivity extends AppCompatActivity {
 
@@ -18,9 +18,6 @@ public class SettingsActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         settingsBinding = DataBindingUtil.setContentView(this, R.layout.activity_settings);
 
-        if (BuildConfig.DEBUG) {
-            Timber.plant(new Timber.DebugTree());
-        }
     }
 
     @Override

@@ -11,55 +11,61 @@ import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Binder;
-import android.os.Handler;
+import android.os.Build;
 import android.os.IBinder;
 import android.os.PowerManager;
+import android.util.Log;
 import android.view.View;
 import android.widget.RemoteViews;
 
 import androidx.core.app.NotificationCompat;
 
-import com.example.android.meditationhub.BuildConfig;
 import com.example.android.meditationhub.R;
 import com.example.android.meditationhub.util.Constants;
-
-import timber.log.Timber;
 
 /**
  * Foreground service based on: https://github.com/DimaKoz/Android-Foreground-Service-Example
  */
 public class MediaPlayerService extends Service implements MediaPlayer.OnErrorListener,
-        MediaPlayer.OnPreparedListener, MediaPlayer.OnBufferingUpdateListener{
+        MediaPlayer.OnPreparedListener, MediaPlayer.OnBufferingUpdateListener {
+
+    private static final String TAG = MediaPlayerService.class.getSimpleName();
 
     private final static String FOREGROUND_CHANNEL_ID = Constants.NOTIFICATION_CHANNEL_ID;
     static private int stateService = Constants.STATE_NOT_INIT;
     private Uri medUri;
+    private String medTitle;
     private final Object lock = new Object();
-    private final Handler handler = new Handler();
+    //private final Handler handler = new Handler();
     private MediaPlayer mediaPlayer;
     private NotificationManager notMan;
+    private NotificationCompat.Builder notBuilder;
+    private Notification not;
     private PowerManager.WakeLock wakeLock;
+    private RemoteViews remoteViews;
 
-    private Handler timerUpdateHandler = new Handler();
-    private Runnable timerUpdateRunnable = new Runnable() {
+    PendingIntent notPender, pausePender, resumePender, stopPender;
 
-        @Override
-        public void run() {
-            notMan.notify(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE,
-                    prepareNotification());
-            timerUpdateHandler.postDelayed(this,
-                    Constants.DELAY_UPDATE_NOTIFICATION_FOREGROUND_SERVICE);
-        }
-    };
-    private Runnable delayedShutdown = new Runnable() {
-
-        public void run() {
-            unlockCPU();
-            stopForeground(true);
-            stopSelf();
-        }
-
-    };
+    //    private Handler timerUpdateHandler = new Handler();
+//    private Runnable timerUpdateRunnable = new Runnable() {
+//
+//        @Override
+//        public void run() {
+//            notMan.notify(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE,
+//                    prepareNotification());
+//            timerUpdateHandler.postDelayed(this,
+//                    Constants.DELAY_UPDATE_NOTIFICATION_FOREGROUND_SERVICE);
+//        }
+//    };
+//    private Runnable delayedShutdown = new Runnable() {
+//
+//        public void run() {
+//            unlockCPU();
+//            stopForeground(true);
+//            stopSelf();
+//        }
+//
+//    };
     public MediaPlayerService() {
     }
 
@@ -90,13 +96,8 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
     public void onCreate() {
         super.onCreate();
 
-        if (BuildConfig.DEBUG) {
-            Timber.plant(new Timber.DebugTree());
-        }
-        Timber.d("onCreate()");
+        Log.d(TAG, "onCreate()");
         stateService = Constants.STATE_NOT_INIT;
-        notMan = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-
     }
 
     @Override
@@ -110,13 +111,14 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
 
         switch (intent.getAction()) {
             case Constants.START_ACTION:
-                Timber.i("Received start Intent ");
-                if(intent.getExtras() != null) {
+                Log.i(TAG, "Received start Intent ");
+                if (intent.getExtras() != null) {
                     medUri = (Uri) intent.getExtras().get(Constants.URI);
+                    medTitle = (String) intent.getExtras().get(Constants.TITLE);
                 }
                 stateService = Constants.STATE_PREPARE;
-
-                startForeground(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE, prepareNotification());
+                setUpNotification();
+                //startForeground(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE, prepareNotification());
                 destroyPlayer();
                 initPlayer();
                 play();
@@ -124,23 +126,25 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
 
             case Constants.PAUSE_ACTION:
                 stateService = Constants.STATE_PAUSE;
-                notMan.notify(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE, prepareNotification());
-                Timber.i("Clicked Pause");
+                updateNotification();
+                //notMan.notify(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE, prepareNotification());
+                Log.i(TAG, "Clicked Pause");
                 destroyPlayer();
-                handler.postDelayed(delayedShutdown, Constants.DELAY_SHUTDOWN_FOREGROUND_SERVICE);
+                //handler.postDelayed(delayedShutdown, Constants.DELAY_SHUTDOWN_FOREGROUND_SERVICE);
                 break;
 
             case Constants.PLAY_ACTION:
                 stateService = Constants.STATE_PREPARE;
-                notMan.notify(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE, prepareNotification());
-                Timber.i("Clicked Play");
+                updateNotification();
+                //notMan.notify(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE, prepareNotification());
+                Log.i(TAG, "Clicked Play");
                 destroyPlayer();
                 initPlayer();
                 play();
                 break;
 
             case Constants.STOP_ACTION:
-                Timber.i("Received Stop Intent");
+                Log.i(TAG, "Received Stop Intent");
                 destroyPlayer();
                 stopForeground(true);
                 stopSelf();
@@ -155,11 +159,11 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
 
     @Override
     public void onDestroy() {
-        Timber.d("onDestroy()");
+        Log.d(TAG, "onDestroy()");
         destroyPlayer();
         stateService = Constants.STATE_NOT_INIT;
         try {
-            timerUpdateHandler.removeCallbacksAndMessages(null);
+            //timerUpdateHandler.removeCallbacksAndMessages(null);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -171,7 +175,7 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
             try {
                 mediaPlayer.reset();
                 mediaPlayer.release();
-                Timber.d("Player destroyed");
+                Log.d(TAG, "Player destroyed");
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {
@@ -183,10 +187,11 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
     }
 
     public boolean onError(MediaPlayer mp, int what, int extra) {
-        Timber.d("Player onError() what:" + what);
+        Log.d(TAG, "Player onError() what:" + what);
         destroyPlayer();
-        handler.postDelayed(delayedShutdown, Constants.DELAY_SHUTDOWN_FOREGROUND_SERVICE);
-        notMan.notify(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE, prepareNotification());
+        //handler.postDelayed(delayedShutdown, Constants.DELAY_SHUTDOWN_FOREGROUND_SERVICE);
+        updateNotification();
+        //notMan.notify(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE, prepareNotification());
         stateService = Constants.STATE_PAUSE;
         return false;
     }
@@ -200,7 +205,7 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
         mediaPlayer.setOnInfoListener(new MediaPlayer.OnInfoListener() {
             @Override
             public boolean onInfo(MediaPlayer mp, int what, int extra) {
-                Timber.d("Player onInfo(), what:" + what + ", extra:" + extra);
+                Log.d(TAG, "Player onInfo(), what:" + what + ", extra:" + extra);
                 return false;
             }
         });
@@ -209,7 +214,7 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
 
     private void play() {
         try {
-            handler.removeCallbacksAndMessages(null);
+            //handler.removeCallbacksAndMessages(null);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -231,11 +236,85 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
         }
     }
 
+    // call this method to setup notification for the first time
+    private void setUpNotification() {
+
+        notMan = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+
+        notPender = createPender(Constants.MAIN_ACTION, Intent.FLAG_ACTIVITY_NEW_TASK);
+        pausePender = createPender(Constants.PAUSE_ACTION, 0);
+        resumePender = createPender(Constants.PLAY_ACTION, 0);
+        stopPender = createPender(Constants.STOP_ACTION, 0);
+
+        // we need to build a basic notification first, then update it
+        Intent notIntent = new Intent(this, MediaPlayerService.class);
+        notIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        PendingIntent pendIntent = PendingIntent.getActivity(this, 0, notIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT);
+
+        // notification's layout
+        remoteViews = new RemoteViews(getPackageName(), R.layout.radio_notification);
+        // notification's title
+        remoteViews.setTextViewText(R.id.not_med_title_tv, medTitle);
+        remoteViews.setOnClickPendingIntent(R.id.not_close_bt, stopPender);
+
+        notBuilder = new NotificationCompat.Builder(this, FOREGROUND_CHANNEL_ID);
+
+        int apiVersion = Build.VERSION.SDK_INT;
+
+        if (apiVersion < Build.VERSION_CODES.HONEYCOMB) {
+            not = new Notification(R.drawable.ic_launcher_foreground, medTitle, System.currentTimeMillis());
+            not.contentView = remoteViews;
+            not.contentIntent = pendIntent;
+
+            not.flags |= Notification.FLAG_NO_CLEAR; //Do not clear the notification
+            not.defaults |= Notification.DEFAULT_LIGHTS;
+
+            // starting service with notification in foreground mode
+            startForeground(Constants.NOTIFICATION_ID, not);
+
+        } else {
+            notBuilder.setSmallIcon(R.drawable.ic_launcher_foreground)
+                    .setAutoCancel(false)
+                    .setOngoing(true)
+                    .setContentIntent(pendIntent)
+                    .setContent(remoteViews)
+                    .setTicker(medTitle);
+
+            // starting service with notification in foreground mode
+            startForeground(Constants.NOTIFICATION_ID, notBuilder.build());
+        }
+    }
+
+    // use this method to update the Notification's UI
+    private void updateNotification() {
+
+        int api = Build.VERSION.SDK_INT;
+        // update the icon
+
+        switch (stateService) {
+            case Constants.STATE_PAUSE:
+                updateRv(View.INVISIBLE, resumePender, android.R.drawable.ic_media_play);
+                break;
+            case Constants.STATE_PLAY:
+                updateRv(View.INVISIBLE, pausePender, android.R.drawable.ic_media_pause);
+                break;
+        }
+
+
+        // update the notification
+        if (api < Build.VERSION_CODES.HONEYCOMB) {
+            notMan.notify(Constants.NOTIFICATION_ID, not);
+        } else {
+            notMan.notify(Constants.NOTIFICATION_ID, notBuilder.build());
+        }
+    }
+
     private Notification prepareNotification() {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O &&
                 notMan.getNotificationChannel(FOREGROUND_CHANNEL_ID) == null) {
             // The user-visible name of the channel.
-            CharSequence name = getString(R.string.text_value_radio_notification);
+            CharSequence name = getString(R.string.app_name);
             int importance = NotificationManager.IMPORTANCE_HIGH;
             NotificationChannel channel = new NotificationChannel(FOREGROUND_CHANNEL_ID, name,
                     importance);
@@ -245,33 +324,21 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
         }
 
         //create the necessary pendingIntents.
-        PendingIntent notPender = createPender(Constants.MAIN_ACTION, Intent.FLAG_ACTIVITY_NEW_TASK);
-        PendingIntent pausePender = createPender(Constants.PAUSE_ACTION, 0);
-        PendingIntent resumePender = createPender(Constants.PLAY_ACTION, 0);
-        PendingIntent stopPender = createPender(Constants.STOP_ACTION, 0);
+        notPender = createPender(Constants.MAIN_ACTION, Intent.FLAG_ACTIVITY_NEW_TASK);
+        pausePender = createPender(Constants.PAUSE_ACTION, 0);
+        resumePender = createPender(Constants.PLAY_ACTION, 0);
+        stopPender = createPender(Constants.STOP_ACTION, 0);
 
-        RemoteViews rv = new RemoteViews(getPackageName(), R.layout.radio_notification);
-        rv.setOnClickPendingIntent(R.id.ui_notification_close_button, stopPender);
+        remoteViews = new RemoteViews(getPackageName(), R.layout.radio_notification);
+        remoteViews.setTextViewText(R.id.not_med_title_tv, medTitle);
+        remoteViews.setOnClickPendingIntent(R.id.not_close_bt, stopPender);
 
-        switch (stateService) {
-
-            case Constants.STATE_PAUSE:
-                updateRv(rv, View.INVISIBLE, resumePender, android.R.drawable.ic_media_play);
-                break;
-
-            case Constants.STATE_PLAY:
-                updateRv(rv, View.INVISIBLE, pausePender, android.R.drawable.ic_media_pause);
-                break;
-
-            case Constants.STATE_PREPARE:
-                updateRv(rv, View.VISIBLE, pausePender, android.R.drawable.ic_media_pause);
-                break;
-        }
+        updateRv(View.VISIBLE, pausePender, android.R.drawable.ic_media_pause);
 
         NotificationCompat.Builder notBuild;
         notBuild = new NotificationCompat.Builder(this,
                 FOREGROUND_CHANNEL_ID);
-        notBuild.setContent(rv)
+        notBuild.setContent(remoteViews)
                 .setSmallIcon(R.mipmap.ic_launcher)
                 .setCategory(NotificationCompat.CATEGORY_SERVICE)
                 .setOnlyAlertOnce(true)
@@ -282,32 +349,35 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
             notBuild.setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
         }
         return notBuild.build();
-
     }
 
-    /** Update the remoteView
+    /**
+     * Update the remoteView
      *
-     * @param rv is the remoteView in question
      * @param visibility triggers visibility settings
-     * @param pender is the pendingIntent to be attached to the remoteView
-     * @param icon is the playback button to be set
+     * @param pender     is the pendingIntent to be attached to the remoteView
+     * @param icon       is the playback button to be set
      */
-    private void updateRv(RemoteViews rv, int visibility, PendingIntent pender, int icon) {
-        rv.setViewVisibility(R.id.ui_notification_progress_bar, visibility);
-        rv.setOnClickPendingIntent(R.id.ui_notification_player_button, pender);
-        rv.setImageViewResource(R.id.ui_notification_player_button, icon);
+    private void updateRv(int visibility, PendingIntent pender, int icon) {
+        remoteViews.setViewVisibility(R.id.not_pb, visibility);
+        remoteViews.setOnClickPendingIntent(R.id.ui_notification_player_button, pender);
+        remoteViews.setImageViewResource(R.id.ui_notification_player_button, icon);
     }
 
-    /** Create pendingIntent
+    /**
+     * Create pendingIntent
      *
      * @param action to be linked to the intent
-     * @param flag to be attached to the intent (if needed)
+     * @param flag   to be attached to the intent (if needed)
      * @return the pendingIntent for further use
      */
     private PendingIntent createPender(String action, int flag) {
         Intent intent = new Intent(this, MediaPlayerService.class);
         if (flag != 0) {
             intent.setFlags(flag);
+        }
+        if (action.equals(Constants.MAIN_ACTION)) {
+            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         }
         intent.setAction(action);
         return PendingIntent.getService(this, 0,
@@ -316,22 +386,22 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
 
     @Override
     public void onPrepared(MediaPlayer mp) {
-        Timber.d("Player onPrepared()");
+        Log.d(TAG, "Player onPrepared()");
         stateService = Constants.STATE_PLAY;
-        notMan.notify(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE,
-                prepareNotification());
+        setUpNotification();
+        //notMan.notify(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE, prepareNotification());
         try {
             mediaPlayer.setWakeMode(this, PowerManager.PARTIAL_WAKE_LOCK);
         } catch (Exception e) {
             e.printStackTrace();
         }
         mediaPlayer.start();
-        timerUpdateHandler.postDelayed(timerUpdateRunnable, 0);
+        //timerUpdateHandler.postDelayed(timerUpdateRunnable, 0);
     }
 
     @Override
     public void onBufferingUpdate(MediaPlayer mp, int percent) {
-        Timber.d("Player onBufferingUpdate():" + percent);
+        Log.d(TAG, "Player onBufferingUpdate():" + percent);
     }
 
     private void lockCPU() {
@@ -341,14 +411,14 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
         }
         wakeLock = powMan.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, this.getClass().getSimpleName());
         wakeLock.acquire();
-        Timber.d("Player lockCPU()");
+        Log.d(TAG, "Player lockCPU()");
     }
 
     private void unlockCPU() {
         if (wakeLock != null && wakeLock.isHeld()) {
             wakeLock.release();
             wakeLock = null;
-            Timber.d("Player unlockCPU()");
+            Log.d(TAG, "Player unlockCPU()");
         }
     }
 

@@ -1,4 +1,4 @@
-package com.example.android.meditationhub;
+package com.example.android.meditationhub.ui;
 
 import android.app.NotificationManager;
 import android.content.Context;
@@ -13,12 +13,16 @@ import android.preference.Preference;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceScreen;
 import android.preference.SwitchPreference;
+import android.util.Log;
+
 import androidx.annotation.Nullable;
 
-import timber.log.Timber;
+import com.example.android.meditationhub.R;
 
 public class SettingsFragment extends PreferenceFragment implements
         SharedPreferences.OnSharedPreferenceChangeListener {
+
+    private static final String TAG = SettingsFragment.class.getSimpleName();
 
     private static final int ON_DO_NOT_DISTURB_CALLBACK_CODE = 888;
     private SharedPreferences sharedPref;
@@ -33,10 +37,6 @@ public class SettingsFragment extends PreferenceFragment implements
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        if (BuildConfig.DEBUG) {
-            Timber.plant(new Timber.DebugTree());
-        }
 
         addPreferencesFromResource(R.xml.menu_settings);
 
@@ -101,7 +101,7 @@ public class SettingsFragment extends PreferenceFragment implements
                     this.requestDNDForApi23AndUp();
                 }
             } catch (SecurityException e) {
-                Timber.e(e);
+                Log.e(TAG, String.valueOf(e));
             }
         }
     }

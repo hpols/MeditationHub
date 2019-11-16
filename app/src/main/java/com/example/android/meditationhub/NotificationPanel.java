@@ -57,7 +57,7 @@ public class NotificationPanel {
 
         Bitmap coverArt = MedUtils.getCoverArt(medUri, ctxt);
 
-        remoteView.setImageViewBitmap(R.id.app_btn, coverArt);
+        remoteView.setImageViewBitmap(R.id.not_app_bt, coverArt);
         updateButton();
 
         //setListeners(remoteView); --> This will open application on click!
@@ -86,7 +86,7 @@ public class NotificationPanel {
 
     private void setBroadcastListeners(RemoteViews view) {
         setBroadcastIntentListeners(view, Constants.ACTION_PAUSE_PLAY, Constants.REQUEST_CODE_PLAY, R.id.play_pause_bt);
-        setBroadcastIntentListeners(view, Constants.OPEN_APP, Constants.REQUEST_OPEN_APP, R.id.app_btn);
+        setBroadcastIntentListeners(view, Constants.OPEN_APP, Constants.REQUEST_OPEN_APP, R.id.not_app_bt);
     }
 
 

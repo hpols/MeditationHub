@@ -5,6 +5,7 @@ import android.os.Environment;
 import java.io.File;
 
 public class Constants {
+
     //keys
     public static final String SELECTED_MED = "ThisMed";
     public static final String ACTION = "action";
@@ -62,5 +63,6 @@ public class Constants {
     public static final String STOP_ACTION = "action_stop";
 
 
-
+    public static final String TITLE = "med_title";
+    public static final String LOGIN_BOO = "is_login";
 }

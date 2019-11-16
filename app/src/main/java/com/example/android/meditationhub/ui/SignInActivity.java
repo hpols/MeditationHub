@@ -1,25 +1,28 @@
 package com.example.android.meditationhub.ui;
 
 import android.content.Intent;
-import androidx.databinding.DataBindingUtil;
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.databinding.DataBindingUtil;
 
 import com.example.android.meditationhub.BuildConfig;
 import com.example.android.meditationhub.R;
 import com.example.android.meditationhub.databinding.ActivitySignInBinding;
+import com.example.android.meditationhub.util.Constants;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 
-import timber.log.Timber;
-
 public class SignInActivity extends AppCompatActivity {
+
+    private static final String TAG = SignInActivity.class.getSimpleName();
 
     private ActivitySignInBinding signInBinding;
 
@@ -32,8 +35,10 @@ public class SignInActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         signInBinding = DataBindingUtil.setContentView(this, R.layout.activity_sign_in);
 
-        if (BuildConfig.DEBUG) {
-            Timber.plant(new Timber.DebugTree());
+        if (savedInstanceState != null) {
+            if (savedInstanceState.containsKey(Constants.LOGIN_BOO)) {
+                isLogin = savedInstanceState.getBoolean(Constants.LOGIN_BOO);
+            }
         }
 
         mAuth = FirebaseAuth.getInstance();
@@ -55,23 +60,25 @@ public class SignInActivity extends AppCompatActivity {
 
                 if (isLogin) {
                     mAuth.signInWithEmailAndPassword(signInBinding.emailEditText.getText().toString(),
-                            signInBinding.passwordEditText.getText().toString()).addOnSuccessListener(new OnSuccessListener<AuthResult>() {
+                            signInBinding.passwordEditText.getText().toString())
+                            .addOnSuccessListener(new OnSuccessListener<AuthResult>() {
                         @Override
                         public void onSuccess(AuthResult authResult) {
-                            Toast.makeText(SignInActivity.this, "You have been signed in", Toast.LENGTH_SHORT).show();
-                            ;
-                            Intent intent = new Intent(SignInActivity.this, MainActivity.class);
+                            Toast.makeText(SignInActivity.this,
+                                    "You have been signed in", Toast.LENGTH_SHORT).show();
+                            Intent intent = new Intent(SignInActivity.this,
+                                    MainActivity.class);
                             intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                             startActivity(intent);
                             finish();
-                            return;
                         }
                     }).addOnFailureListener(new OnFailureListener() {
                         @Override
                         public void onFailure(@NonNull Exception e) {
                             inProgress(false);
-                            Toast.makeText(SignInActivity.this, "Sign in failed: " + e, Toast.LENGTH_SHORT).show();
-                            Timber.e(e);
+                            Toast.makeText(SignInActivity.this, "Sign in failed: " + e,
+                                    Toast.LENGTH_SHORT).show();
+                            Log.e(TAG, String.valueOf(e));
                         }
                     });
                 } else {
@@ -79,14 +86,18 @@ public class SignInActivity extends AppCompatActivity {
                         signInBinding.activationEt.setError("REQUIRED");
                         return;
                     }
-                    if (signInBinding.activationEt.getText().toString() != BuildConfig.ACTIVATION_KEY) {
-                        mAuth.createUserWithEmailAndPassword(signInBinding.emailEditText.getText().toString(),
-                                signInBinding.passwordEditText.getText().toString()).addOnSuccessListener(new OnSuccessListener<AuthResult>() {
+                    if (!signInBinding.activationEt.getText().toString()
+                            .equals(BuildConfig.ACTIVATION_KEY)) {
+                        mAuth.createUserWithEmailAndPassword(signInBinding.emailEditText.getText()
+                                        .toString(),
+                                signInBinding.passwordEditText.getText().toString())
+                                .addOnSuccessListener(new OnSuccessListener<AuthResult>() {
                             @Override
                             public void onSuccess(AuthResult authResult) {
-                                Toast.makeText(SignInActivity.this, "You account has been created", Toast.LENGTH_SHORT).show();
-                                ;
-                                Intent intent = new Intent(SignInActivity.this, MainActivity.class);
+                                Toast.makeText(SignInActivity.this,
+                                        "You account has been created", Toast.LENGTH_SHORT).show();
+                                Intent intent = new Intent(SignInActivity.this,
+                                        MainActivity.class);
                                 intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                                 startActivity(intent);
                                 inProgress(false);
@@ -95,12 +106,14 @@ public class SignInActivity extends AppCompatActivity {
                             @Override
                             public void onFailure(@NonNull Exception e) {
                                 inProgress(false);
-                                Toast.makeText(SignInActivity.this, "Registration has failed: " + e, Toast.LENGTH_SHORT).show();
-                                Timber.e(e);
+                                Toast.makeText(SignInActivity.this,
+                                        "Registration has failed: " + e, Toast.LENGTH_SHORT).show();
+                                Log.e(TAG, String.valueOf(e));
                             }
                         });
                     } else {
-                        Toast.makeText(SignInActivity.this, "Your activation code is incorrect. Access to the meditation audio files is restricted to those who have received the code.", Toast.LENGTH_LONG).show();
+                        Toast.makeText(SignInActivity.this,
+                                "Your activation code is incorrect. Access to the meditation audio files is restricted to those who have received the code.", Toast.LENGTH_LONG).show();
                     }
 
                 }
@@ -112,9 +125,14 @@ public class SignInActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 finish();
-                return;
             }
         });
+    }
+
+    @Override
+    public void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putBoolean(Constants.LOGIN_BOO, isLogin);
     }
 
     private void setupLogRegButton() {
@@ -143,7 +161,7 @@ public class SignInActivity extends AppCompatActivity {
 
     private boolean isEmpty() {
         if (TextUtils.isEmpty(signInBinding.emailEditText.getText().toString())) {
-            signInBinding.emailEditText.setError("REQUI RED");
+            signInBinding.emailEditText.setError("REQUIRED");
             return true;
         }
         if (TextUtils.isEmpty(signInBinding.passwordEditText.getText().toString())) {

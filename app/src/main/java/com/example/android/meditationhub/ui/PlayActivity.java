@@ -10,12 +10,12 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.util.Log;
 import android.view.View;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.databinding.DataBindingUtil;
 
-import com.example.android.meditationhub.BuildConfig;
 import com.example.android.meditationhub.R;
 import com.example.android.meditationhub.databinding.ActivityPlayerBinding;
 import com.example.android.meditationhub.model.MeditationLocal;
@@ -24,11 +24,10 @@ import com.example.android.meditationhub.util.Constants;
 import com.example.android.meditationhub.util.MedUtils;
 import com.swifty.animateplaybutton.AnimatePlayButton;
 
-import timber.log.Timber;
-
 public class PlayActivity extends AppCompatActivity {
 
     private ActivityPlayerBinding playBinding;
+    private static final String TAG = PlayActivity.class.getSimpleName();
 
     private MeditationLocal selectedMed;
     private Bitmap coverArt;
@@ -45,10 +44,6 @@ public class PlayActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         playBinding = DataBindingUtil.setContentView(this, R.layout.activity_player);
-
-        if (BuildConfig.DEBUG) {
-            Timber.plant(new Timber.DebugTree());
-        }
 
         //retrieve information from the SaveInstance or Intent depending on the flow
         if (savedInstanceState != null) {
@@ -83,12 +78,13 @@ public class PlayActivity extends AppCompatActivity {
                 mediaPlayerServiceInt = new Intent(PlayActivity.this, MediaPlayerService.class);
                 mediaPlayerServiceInt.setAction(Constants.START_ACTION);
                 mediaPlayerServiceInt.putExtra(Constants.URI, medUri);
-//                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-//                    startForegroundService(mediaPlayerServiceInt);
-//                } else {
+                mediaPlayerServiceInt.putExtra(Constants.TITLE, selectedMed.getTitle());
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    startForegroundService(mediaPlayerServiceInt);
+                } else {
                     startService(mediaPlayerServiceInt);
-                    bindMediaPlayerService();
-//                }
+                }
+                bindMediaPlayerService();
                 return true;
             }
 
@@ -148,7 +144,7 @@ public class PlayActivity extends AppCompatActivity {
                     return savedInstanceState.getParcelable(key);
             }
 
-            Timber.v(key + "retrieved instant state");
+            Log.v(TAG, key + "retrieved instant state");
         }
         return null;
     }
@@ -172,7 +168,7 @@ public class PlayActivity extends AppCompatActivity {
     private void unbindMediaPlayerService() {
         unbindService(mediaPlayerConnection);
         serviceIsBound = false;
-        Timber.v("Service unbound");
+        Log.v(TAG,"Service unbound");
     }
 
     /**
@@ -182,9 +178,9 @@ public class PlayActivity extends AppCompatActivity {
         if (!serviceIsBound) {
             Intent bindInt = new Intent(this, MediaPlayerService.class);
             serviceIsBound = bindService(bindInt, mediaPlayerConnection, Context.BIND_AUTO_CREATE);
-            Timber.v("Service bound");
+            Log.v(TAG, "Service bound");
         } else {
-            Timber.v("no Service to bind");
+            Log.v(TAG,"no Service to bind");
         }
     }
 
@@ -196,7 +192,7 @@ public class PlayActivity extends AppCompatActivity {
         outState.putParcelable(Constants.ART, coverArt);
         outState.putParcelable(Constants.URI, medUri);
 
-        Timber.v("all outstates saved");
+        Log.v(TAG,"all outstates saved");
     }
 
     @Override
