@@ -9,6 +9,7 @@ import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
+import android.util.Log;
 
 import com.example.android.meditationhub.R;
 import com.example.android.meditationhub.ui.PlayerActivity;
@@ -17,9 +18,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import timber.log.Timber;
-
 public class PlayerService extends Service implements PlayerAdapter {
+
+    private static final String TAG = PlayerService.class.getSimpleName();
 
     private MediaPlayer mediaPlayer;
     private Uri audioUri;
@@ -138,13 +139,13 @@ public class PlayerService extends Service implements PlayerAdapter {
         try {
             mediaPlayer.setDataSource(this, audioUri);
         } catch (Exception e) {
-            Timber.e(e.toString());
+            Log.e(TAG, e.toString());
         }
 
         try {
             mediaPlayer.prepare();
         } catch (Exception e) {
-            Timber.e(e.toString());
+            Log.e(TAG, e.toString());
         }
 
         initializeProgressCallback();
@@ -258,20 +259,20 @@ public class PlayerService extends Service implements PlayerAdapter {
                 timberText = "turned on";
                 auMan.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
             }
-            Timber.i("RINGER is " + timberText);
+            Log.i(TAG,"RINGER is " + timberText);
 
             //turn off sound, disable notifications
             auMan.setStreamMute(AudioManager.STREAM_SYSTEM, activation);
-            Timber.i("STREAM_SYSTEM" + timberText);
+            Log.i(TAG,"STREAM_SYSTEM" + timberText);
             //notifications
             auMan.setStreamMute(AudioManager.STREAM_NOTIFICATION, activation);
-            Timber.i("STREAM_NOTIFICATION" + timberText);
+            Log.i(TAG,"STREAM_NOTIFICATION" + timberText);
             //alarm
             auMan.setStreamMute(AudioManager.STREAM_ALARM, activation);
-            Timber.i("STREAM_ALARM" + timberText);
+            Log.i(TAG,"STREAM_ALARM" + timberText);
             //ringer
             auMan.setStreamMute(AudioManager.STREAM_RING, activation);
-            Timber.i("STREAM_RING" + timberText);
+            Log.i(TAG,"STREAM_RING" + timberText);
         }
     }
 }

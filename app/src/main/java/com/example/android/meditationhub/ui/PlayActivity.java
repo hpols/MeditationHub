@@ -45,22 +45,16 @@ public class PlayActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         playBinding = DataBindingUtil.setContentView(this, R.layout.activity_player);
 
-        //retrieve information from the SaveInstance or Intent depending on the flow
-        if (savedInstanceState != null) {
-            position =  mediaPlayerService.getPosition();
-            isPlaying = (boolean) getSavedInstanceState(savedInstanceState, Constants.IS_PLAYING,
-                    Constants.SAVED_BOO);
-            selectedMed = (MeditationLocal) getSavedInstanceState(savedInstanceState,
-                    Constants.SELECTED_MED, Constants.SAVED_PARCEL);
-            coverArt = (Bitmap) getSavedInstanceState(savedInstanceState, Constants.ART,
-                    Constants.SAVED_PARCEL);
-            medUri = (Uri) getSavedInstanceState(savedInstanceState, Constants.URI,
-                    Constants.SAVED_PARCEL);
+        //retrieve information from the Service or Intent depending on the flow
+        if (MediaPlayerService.getState() != Constants.STATE_NOT_INIT) {
+            position = mediaPlayerService.getPosition();
+            selectedMed = mediaPlayerService.getSelectedMed();
+            coverArt = mediaPlayerService.getCoverArt();
+            //we don't need to retrieve URI as it is only handled in the Service
         } else {
             //retrieve information passed with the intent
             selectedMed = getIntent().getParcelableExtra(Constants.SELECTED_MED);
             medUri = getIntent().getParcelableExtra(Constants.URI);
-
             coverArt = MedUtils.getCoverArt(medUri, this);
         }
         initializeUI();
@@ -118,35 +112,10 @@ public class PlayActivity extends AppCompatActivity {
 
             @Override
             public boolean onStopClick(View view) {
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-                    stopService(mediaPlayerServiceInt);
-                }
+                stopService(mediaPlayerServiceInt);
                 return true;
             }
         });
-    }
-
-    /**
-     * retrieve information saved before activity was destroyed.
-     *
-     * @param savedInstanceState is the bundle holding the saved information
-     * @param key                indicates what information was saved
-     * @param type               is the type of variable to be retrieved
-     */
-    private Object getSavedInstanceState(Bundle savedInstanceState, String key, int type) {
-        if (savedInstanceState.containsKey(key)) {
-            switch (type) {
-                case Constants.SAVED_INT:
-                    return savedInstanceState.getInt(key);
-                case Constants.SAVED_BOO:
-                    return savedInstanceState.getBoolean(key);
-                case Constants.SAVED_PARCEL:
-                    return savedInstanceState.getParcelable(key);
-            }
-
-            Log.v(TAG, key + "retrieved instant state");
-        }
-        return null;
     }
 
     //monitor state of the service
@@ -166,9 +135,12 @@ public class PlayActivity extends AppCompatActivity {
 
     //unbind service so the audio continues to play
     private void unbindMediaPlayerService() {
+        mediaPlayerService.setCoverArt(coverArt);
+        mediaPlayerService.setSelectedMed(selectedMed);
+
         unbindService(mediaPlayerConnection);
         serviceIsBound = false;
-        Log.v(TAG,"Service unbound");
+        Log.v(TAG, "Service unbound");
     }
 
     /**
@@ -180,19 +152,8 @@ public class PlayActivity extends AppCompatActivity {
             serviceIsBound = bindService(bindInt, mediaPlayerConnection, Context.BIND_AUTO_CREATE);
             Log.v(TAG, "Service bound");
         } else {
-            Log.v(TAG,"no Service to bind");
+            Log.v(TAG, "no Service to bind");
         }
-    }
-
-    @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        super.onSaveInstanceState(outState);
-        outState.putBoolean(Constants.IS_PLAYING, isPlaying);
-        outState.putParcelable(Constants.SELECTED_MED, selectedMed);
-        outState.putParcelable(Constants.ART, coverArt);
-        outState.putParcelable(Constants.URI, medUri);
-
-        Log.v(TAG,"all outstates saved");
     }
 
     @Override

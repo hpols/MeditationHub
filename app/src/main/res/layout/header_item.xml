@@ -8,10 +8,11 @@
     <TextView
         android:id="@+id/header_tv"
         style="@style/text"
-        android:textStyle="bold"
-        android:textSize="24sp"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:padding="@dimen/margin_std"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

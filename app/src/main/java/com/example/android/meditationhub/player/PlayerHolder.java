@@ -23,6 +23,7 @@ import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.preference.PreferenceManager;
+import android.util.Log;
 
 import com.example.android.meditationhub.R;
 import com.example.android.meditationhub.ui.PlayerActivity;
@@ -31,13 +32,13 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import timber.log.Timber;
-
 /**
  * Exposes the functionality of the {@link MediaPlayer} and implements the {@link PlayerAdapter}
  * so that {@link PlayerActivity} can control music playback.
  */
 public final class PlayerHolder implements PlayerAdapter {
+
+    private static final String TAG = PlayerHolder.class.getSimpleName();
 
     private static final int PLAYBACK_POSITION_REFRESH_INTERVAL_MS = 1000;
 
@@ -98,13 +99,13 @@ public final class PlayerHolder implements PlayerAdapter {
         try {
             mediaPlayer.setDataSource(ctxt, audioUri);
         } catch (Exception e) {
-            Timber.e(e.toString());
+            Log.e(TAG, e.toString());
         }
 
         try {
             mediaPlayer.prepare();
         } catch (Exception e) {
-            Timber.e(e.toString());
+            Log.e(TAG,e.toString());
         }
 
         initializeProgressCallback();
@@ -198,7 +199,7 @@ public final class PlayerHolder implements PlayerAdapter {
                             }
                         });
                     } catch (Exception e) {
-                        Timber.e("Exception from Playback position update: " + e);
+                        Log.e(TAG, "Exception from Playback position update: " + e);
                     }
 
                 }
@@ -261,20 +262,20 @@ public final class PlayerHolder implements PlayerAdapter {
                 timberText = "turned on";
                 auMan.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
             }
-            Timber.i("RINGER is " + timberText);
+            Log.i(TAG,"RINGER is " + timberText);
 
             //turn off sound, disable notifications
             auMan.setStreamMute(AudioManager.STREAM_SYSTEM, activation);
-            Timber.i("STREAM_SYSTEM" + timberText);
+            Log.i(TAG,"STREAM_SYSTEM" + timberText);
             //notifications
             auMan.setStreamMute(AudioManager.STREAM_NOTIFICATION, activation);
-            Timber.i("STREAM_NOTIFICATION" + timberText);
+            Log.i(TAG,"STREAM_NOTIFICATION" + timberText);
             //alarm
             auMan.setStreamMute(AudioManager.STREAM_ALARM, activation);
-            Timber.i("STREAM_ALARM" + timberText);
+            Log.i(TAG,"STREAM_ALARM" + timberText);
             //ringer
             auMan.setStreamMute(AudioManager.STREAM_RING, activation);
-            Timber.i("STREAM_RING" + timberText);
+            Log.i(TAG,"STREAM_RING" + timberText);
         }
     }
 }

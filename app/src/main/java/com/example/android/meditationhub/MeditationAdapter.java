@@ -10,8 +10,9 @@ import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.preference.PreferenceManager;
+import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -26,7 +27,6 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
 import androidx.constraintlayout.widget.ConstraintLayout;
-import androidx.core.content.FileProvider;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.chauthai.swipereveallayout.SwipeRevealLayout;
@@ -47,17 +47,16 @@ import com.google.firebase.storage.StorageReference;
 import com.nabinbhandari.android.permissions.PermissionHandler;
 import com.nabinbhandari.android.permissions.Permissions;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-
-import timber.log.Timber;
 
 /**
  * The {@link MeditationAdapter} ensures that the {@link RecyclerView} can display all information,
  * updating itself after any changes.
  */
 public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+
+    private static final String TAG = MeditationAdapter.class.getSimpleName();
 
     private Context ctxt;
     private static FirebaseUser user;
@@ -99,6 +98,7 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
                     false);
             return new HeaderVH(root);
         } else if (viewType == ItemList.TYPE_ITEM){
+
             View root = LayoutInflater.from(ctxt).inflate(R.layout.swiping_recycler, viewGroup,
                     false);
 
@@ -130,40 +130,47 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
             // You need to provide a String id which uniquely defines the data object.
             viewBinderHelper.bind(medVh.swipeRevealLayout, selectedMed.getId());
 
-            Timber.d("this meditation = " + selectedMed.toString());
+            Log.d(TAG,"this meditation = " + selectedMed.toString());
 
             String removeText = ctxt.getString((R.string.alert_title), selectedMed.getTitle());
             medVh.alertTv.setText(removeText);
 
-            medVh.titleTv.setText(selectedMed.getTitle());
-            medVh.subtitleTv.setText(selectedMed.getSubtitle());
-
             //set Action image and its responses to clicks
-            int actionImage;
+            int actionImage = android.R.drawable.stat_sys_download;
             if (selectedMed.getStorage() == null) {
-                actionImage = android.R.drawable.stat_sys_download;
+                medVh.thumbIv.setAlpha((float) 0.2);
+                medVh.thumbIv.setImageResource(R.drawable.ic_meditation_hub);
+
+                medVh.titleTv.setVisibility(View.VISIBLE);
+                medVh.subtitleTv.setVisibility(View.VISIBLE);
+                medVh.titleTv.setText(selectedMed.getTitle());
+                medVh.subtitleTv.setText(selectedMed.getSubtitle());
+
                 viewBinderHelper.lockSwipe(String.valueOf(medPos));
             } else {
                 actionImage = android.R.drawable.ic_media_play;
-                medVh.thumbIv.setVisibility(View.VISIBLE);
-                medVh.medUri = getUri(selectedMed);
+                medVh.thumbIv.setAlpha((float)1.0);
+                medVh.medUri = MedUtils.getUri(selectedMed, ctxt);
                 viewBinderHelper.unlockSwipe(String.valueOf(medPos));
 
                 medVh.coverArt = MedUtils.getCoverArt(medVh.medUri, ctxt);
                 MedUtils.displayCoverArt(medVh.coverArt, medVh.thumbIv);
+
+                medVh.titleTv.setVisibility(View.INVISIBLE);
+                medVh.subtitleTv.setVisibility(View.INVISIBLE);
             }
             medVh.actionIb.setImageResource(actionImage);
 
             medVh.actionIb.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    Timber.v("button clicked in recyclerView");
+                    Log.v(TAG, "button clicked in recyclerView");
                     if (user == null) {
                         Toast.makeText(ctxt, "Please login to use this feature",
                                 Toast.LENGTH_SHORT).show();
                     } else {
                         if (selectedMed.getStorage() == null) {
-                            Timber.v("downloaded started");
+                            Log.v(TAG, "downloaded started");
                             //download file
                             Permissions.check(ctxt, Manifest.permission.WRITE_EXTERNAL_STORAGE,
                                     null, new PermissionHandler() {
@@ -181,7 +188,7 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
                                             }).addOnFailureListener(new OnFailureListener() {
                                                 @Override
                                                 public void onFailure(@NonNull Exception exception) {
-                                                    Timber.e(ctxt.getString(R.string.download_error)
+                                                    Log.e(TAG, ctxt.getString(R.string.download_error)
                                                             + exception.toString());
                                                     Toast.makeText(ctxt, ctxt.getString(R.string.download_error),
                                                             Toast.LENGTH_LONG).show();
@@ -217,18 +224,6 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
                 }
             });
         }
-    }
-
-    private Uri getUri(MeditationLocal selectedMed) {
-        File medPath = new File(Environment.getExternalStorageDirectory(),
-                ctxt.getString(R.string.app_name));
-        File medFile = new File(medPath, selectedMed.getFilename());
-        Uri medUri = FileProvider.getUriForFile(ctxt,
-                ctxt.getApplicationContext().getPackageName() + ".file_provider", medFile);
-        ctxt.grantUriPermission(ctxt.getApplicationContext().getPackageName(), medUri,
-                Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        Timber.v("accessing content via uri: " + medUri);
-        return Uri.parse(selectedMed.getStorage());
     }
 
     private void goToPlayer(MeditationLocal selectedMed, Uri medUri, ImageView thumbIv) {
@@ -287,26 +282,16 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
 
     class MeditationVH extends RecyclerView.ViewHolder {
 
-        //@BindView(R.id.title_tv)
         TextView titleTv;
-        //@BindView(R.id.subtitle_tv)
         TextView subtitleTv;
-        //@BindView(R.id.action_ib)
         ImageButton actionIb;
-        //@BindView(R.id.thumb_iv)
         ImageView thumbIv;
 
-        //@BindView(R.id.swipe_layout)
         SwipeRevealLayout swipeRevealLayout;
-        //@BindView(R.id.swipe_reveal)
         ConstraintLayout swipeReveal;
-        //@BindView(R.id.swipe_main)
         CardView swipeMain;
-        //@BindView(R.id.alert_ok_bt)
         Button okBt;
-        //@BindView(R.id.alert_cancel_bt)
         Button cancelBt;
-        //@BindView((R.id.alert_cb))
         CheckBox alertCb;
         TextView alertTv;
 
@@ -315,7 +300,11 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
 
         MeditationVH(final View view) {
             super(view);
-            //ButterKnife.bind(this, view);
+
+            DisplayMetrics displaymetrics = new DisplayMetrics();
+            ((Activity) ctxt).getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
+
+            view.getLayoutParams().width = displaymetrics.widthPixels / MedUtils.noOfCols(ctxt);
 
             swipeRevealLayout = itemView.findViewById(R.id.swipe_layout);
             swipeReveal = itemView.findViewById(R.id.swipe_reveal);

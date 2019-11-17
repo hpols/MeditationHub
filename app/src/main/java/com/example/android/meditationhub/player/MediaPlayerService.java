@@ -7,6 +7,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
@@ -21,6 +22,7 @@ import android.widget.RemoteViews;
 import androidx.core.app.NotificationCompat;
 
 import com.example.android.meditationhub.R;
+import com.example.android.meditationhub.model.MeditationLocal;
 import com.example.android.meditationhub.util.Constants;
 
 /**
@@ -33,6 +35,9 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
 
     private final static String FOREGROUND_CHANNEL_ID = Constants.NOTIFICATION_CHANNEL_ID;
     static private int stateService = Constants.STATE_NOT_INIT;
+    private MeditationLocal selectedMed;
+
+    private Bitmap coverArt;
     private Uri medUri;
     private String medTitle;
     private final Object lock = new Object();
@@ -113,8 +118,10 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
             case Constants.START_ACTION:
                 Log.i(TAG, "Received start Intent ");
                 if (intent.getExtras() != null) {
+                    selectedMed = (MeditationLocal) intent.getExtras().get(Constants.SELECTED_MED);
                     medUri = (Uri) intent.getExtras().get(Constants.URI);
                     medTitle = (String) intent.getExtras().get(Constants.TITLE);
+                    coverArt = (Bitmap) intent.getExtras().get(Constants.ART);
                 }
                 stateService = Constants.STATE_PREPARE;
                 setUpNotification();
@@ -424,5 +431,37 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
 
     public int getPosition() {
         return mediaPlayer.getCurrentPosition();
+    }
+
+    public MeditationLocal getSelectedMed() {
+        return selectedMed;
+    }
+
+    public Bitmap getCoverArt() {
+        return coverArt;
+    }
+
+    public Uri getMedUri() {
+        return medUri;
+    }
+
+    public String getMedTitle() {
+        return medTitle;
+    }
+
+    public void setSelectedMed(MeditationLocal selectedMed) {
+        this.selectedMed = selectedMed;
+    }
+
+    public void setCoverArt(Bitmap coverArt) {
+        this.coverArt = coverArt;
+    }
+
+    public void setMedUri(Uri medUri) {
+        this.medUri = medUri;
+    }
+
+    public void setMedTitle(String medTitle) {
+        this.medTitle = medTitle;
     }
 }

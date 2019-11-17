@@ -1,6 +1,7 @@
 package com.example.android.meditationhub.util;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -8,15 +9,23 @@ import android.media.MediaMetadataRetriever;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
+import android.os.Environment;
 import android.preference.PreferenceManager;
+import android.util.Log;
 import android.widget.ImageView;
 
+import androidx.core.content.FileProvider;
+
 import com.example.android.meditationhub.R;
+import com.example.android.meditationhub.model.MeditationLocal;
 import com.example.android.meditationhub.ui.PlayerActivity;
 
+import java.io.File;
 import java.util.Locale;
 
 public class MedUtils {
+
+    private static final String TAG = MedUtils.class.getSimpleName();
 
     static SharedPreferences sharedPref;
     static SharedPreferences.Editor sharedPrefEd;
@@ -102,5 +111,17 @@ public class MedUtils {
                 sharedPref.getString(ctxt.getResources().getString(R.string.pref_key_time_delay),
                         ctxt.getResources().getString(R.string.pref_default_time_delay));
         return Integer.parseInt(delayString);
+    }
+
+    public static Uri getUri(MeditationLocal selectedMed, Context ctxt) {
+        File medPath = new File(Environment.getExternalStorageDirectory(),
+                ctxt.getString(R.string.app_name));
+        File medFile = new File(medPath, selectedMed.getFilename());
+        Uri medUri = FileProvider.getUriForFile(ctxt,
+                ctxt.getApplicationContext().getPackageName() + ".file_provider", medFile);
+        ctxt.grantUriPermission(ctxt.getApplicationContext().getPackageName(), medUri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        Log.v(TAG,"accessing content via uri: " + medUri);
+        return Uri.parse(selectedMed.getStorage());
     }
 }

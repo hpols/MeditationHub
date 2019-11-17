@@ -35,6 +35,8 @@ public class SignInActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         signInBinding = DataBindingUtil.setContentView(this, R.layout.activity_sign_in);
 
+        Log.v(TAG, "Activiationcode: " + BuildConfig.ACTIVATION_KEY);
+
         if (savedInstanceState != null) {
             if (savedInstanceState.containsKey(Constants.LOGIN_BOO)) {
                 isLogin = savedInstanceState.getBoolean(Constants.LOGIN_BOO);
@@ -86,7 +88,7 @@ public class SignInActivity extends AppCompatActivity {
                         signInBinding.activationEt.setError("REQUIRED");
                         return;
                     }
-                    if (!signInBinding.activationEt.getText().toString()
+                    if (signInBinding.activationEt.getText().toString().trim()
                             .equals(BuildConfig.ACTIVATION_KEY)) {
                         mAuth.createUserWithEmailAndPassword(signInBinding.emailEditText.getText()
                                         .toString(),
@@ -114,10 +116,9 @@ public class SignInActivity extends AppCompatActivity {
                     } else {
                         Toast.makeText(SignInActivity.this,
                                 "Your activation code is incorrect. Access to the meditation audio files is restricted to those who have received the code.", Toast.LENGTH_LONG).show();
+                        inProgress(false);
                     }
-
                 }
-
             }
         });
 

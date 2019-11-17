@@ -7,7 +7,7 @@
     android:orientation="horizontal">
 
     <ImageButton
-        android:id="@+id/app_btn"
+        android:id="@+id/not_app_bt"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:background="@android:color/transparent"

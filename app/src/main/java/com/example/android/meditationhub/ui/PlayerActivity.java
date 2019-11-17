@@ -3,18 +3,18 @@ package com.example.android.meditationhub.ui;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import androidx.databinding.DataBindingUtil;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
-import androidx.appcompat.app.AppCompatActivity;
 import android.util.Log;
 import android.widget.SeekBar;
 
-import com.example.android.meditationhub.BuildConfig;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.databinding.DataBindingUtil;
+
 import com.example.android.meditationhub.NotificationPanel;
 import com.example.android.meditationhub.R;
 import com.example.android.meditationhub.databinding.ActivityPlayerBinding;
@@ -27,9 +27,9 @@ import com.example.android.meditationhub.player.PlayerService;
 import com.example.android.meditationhub.util.Constants;
 import com.example.android.meditationhub.util.MedUtils;
 
-import timber.log.Timber;
-
 public class PlayerActivity extends AppCompatActivity {
+
+    private static final String TAG = PlayerActivity.class.getSimpleName();
 
     public static boolean displayHours;
     private ActivityPlayerBinding playerBinding;
@@ -56,10 +56,6 @@ public class PlayerActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         playerBinding = DataBindingUtil.setContentView(this, R.layout.activity_player);
-
-        if (BuildConfig.DEBUG) {
-            Timber.plant(new Timber.DebugTree());
-        }
 
         //retrieve information from the SaveInstance or Intent depending on the flow
         if (savedInstanceState != null) {
@@ -88,7 +84,7 @@ public class PlayerActivity extends AppCompatActivity {
         //initializePlaybackController();
         //initializeSeekbar();
         //initializeSession();
-        Timber.d("onCreate: finished");
+        Log.d(TAG,"onCreate: finished");
     }
 
     /**
@@ -182,7 +178,7 @@ public class PlayerActivity extends AppCompatActivity {
 //                setupReceiver();
 //            }
 //        }
-        Timber.d("onStart: create MediaPlayer");
+        Log.d(TAG,"onStart: create MediaPlayer");
     }
 
     @Override
@@ -310,13 +306,13 @@ public class PlayerActivity extends AppCompatActivity {
 
     private void initializePlaybackController() {
         playerHolder = new PlayerHolder(this, this);
-        Timber.d("initializePlaybackController: created PlayerHolder");
+        Log.d(TAG,"initializePlaybackController: created PlayerHolder");
         playerHolder.setPlaybackInfoListener(new PlaybackListener());
         playerAdapter = playerHolder;
         if (position != 0) {
             playerHolder.setPosition(position);
         }
-        Timber.d("initializePlaybackController: PlayerHolder progress callback set");
+        Log.d(TAG,"initializePlaybackController: PlayerHolder progress callback set");
     }
 
     private void initializeSeekbar() {
@@ -352,7 +348,7 @@ public class PlayerActivity extends AppCompatActivity {
 
             String displayDuration = MedUtils.getDisplayTime(duration, false, Constants.CONVERT_DURATION);
             playerBinding.durationTv.setText(displayDuration);
-            Timber.d("Playback duration: " + displayDuration);
+            Log.d(TAG,"Playback duration: " + displayDuration);
         }
 
         @Override
@@ -361,14 +357,14 @@ public class PlayerActivity extends AppCompatActivity {
                 playerBinding.progressSb.setProgress(position);
                 String displayPosition = MedUtils.getDisplayTime(position, displayHours, Constants.CONVERT_POSITION);
                 playerBinding.positionTv.setText(displayPosition);
-                Timber.d("setPlaybackPosition: setProgress " + displayPosition);
+                Log.d(TAG,"setPlaybackPosition: setProgress " + displayPosition);
             }
         }
 
         @Override
         public void onStateChanged(@State int state) {
             String stateToString = PlaybackInfoListener.convertStateToString(state);
-            Timber.v("onStateChanged " + stateToString);
+            Log.v(TAG,"onStateChanged " + stateToString);
         }
 
         @Override

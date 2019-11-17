@@ -29,7 +29,6 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import com.example.android.meditationhub.BuildConfig;
 import com.example.android.meditationhub.MeditationAdapter;
 import com.example.android.meditationhub.R;
-import com.example.android.meditationhub.SettingsActivity;
 import com.example.android.meditationhub.databinding.ActivityMainBinding;
 import com.example.android.meditationhub.model.Header;
 import com.example.android.meditationhub.model.ItemList;
@@ -53,9 +52,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import timber.log.Timber;
-
 public class MainActivity extends AppCompatActivity implements MeditationAdapter.AdapterInterface {
+
+    private static final String TAG = MainActivity.class.getSimpleName();
 
     private FirebaseAuth fireAuth;
     private FirebaseDatabase fireDb;
@@ -76,10 +75,6 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         mainBinding = DataBindingUtil.setContentView(this, R.layout.activity_main);
-
-        if (BuildConfig.DEBUG) {
-            Timber.plant(new Timber.DebugTree());
-        }
 
         sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
         sharedPrefEd = sharedPref.edit();
@@ -123,13 +118,14 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
         viewModel.getMeditationLocalEntries().observe(this, new Observer<List<MeditationLocal>>() {
             @Override
             public void onChanged(@Nullable List<MeditationLocal> meditationLocals) {
-                Timber.d("Updating entries from LiveData in ViewModel");
+                Log.d(TAG,"Updating entries from LiveData in ViewModel");
                 createOrderedItemList(meditationLocals);
 
                 medAdapter = new MeditationAdapter(MainActivity.this, fireAuth, items,
                         MainActivity.this);
 
                 final int numOfCol = MedUtils.noOfCols(MainActivity.this);
+
                 GridLayoutManager layoutMan = new GridLayoutManager(MainActivity.this,
                         numOfCol);
                 layoutMan.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
@@ -146,6 +142,7 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
                 });
 
                 mainBinding.meditationRv.setLayoutManager(layoutMan);
+                mainBinding.meditationRv.setHasFixedSize(true);
                 mainBinding.meditationRv.setAdapter(medAdapter);
             }
         });
@@ -284,7 +281,7 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
         //set up the download manager and the file destination
         final DownloadManager dlManager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
         String destination = Environment.getExternalStorageDirectory() + "/MeditationHub";
-        Timber.v("destination: " + destination);
+        Log.v(TAG,"destination: " + destination);
 
         //ensure the folder exists before continuing
         File file = new File(destination);
@@ -347,7 +344,7 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
                                     @Override
                                     public void run() {
                                         snackProg.setProgress(dlProgress);
-                                        Timber.v("Progress: downloaded: " + bytesLoaded +
+                                        Log.v(TAG,"Progress: downloaded: " + bytesLoaded +
                                                 " from total: " + bytesTotal + "=" + dlProgress);
                                     }
                                 });
@@ -358,14 +355,14 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
 
                             final Uri contentUri = FileProvider.getUriForFile(MainActivity.this,
                                     BuildConfig.APPLICATION_ID + ".file_provider", new File(finalDestination));
-                            Timber.v("content Uri of downloaded audio: " + contentUri);
+                            Log.v(TAG,"content Uri of downloaded audio: " + contentUri);
 
                             EntryExecutor.getInstance().diskIO().execute(new Runnable() {
                                 @Override
                                 public void run() {
                                     selectedMed.setStorage(String.valueOf(contentUri));
                                     meditationLocalDb.meditationLocalDao().updateEntry(selectedMed);
-                                    Timber.v("Updated meditation: " + selectedMed.toString());
+                                    Log.v(TAG,"Updated meditation: " + selectedMed.toString());
                                 }
                             });
                             bar.dismiss();
@@ -375,7 +372,7 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
                             break;
                     }
 
-                    Timber.d(msg);
+                    Log.d(TAG,msg);
                     csr.close();
                 }
             }
