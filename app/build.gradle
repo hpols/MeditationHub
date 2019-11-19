@@ -47,8 +47,6 @@ dependencies {
     testImplementation 'androidx.room:room-testing:2.2.1'
 
     implementation 'com.nabinbhandari.android:permissions:3.8'//Android Permissions
-    implementation 'com.chauthai.swipereveallayout:swipe-reveal-layout:1.4.1' //swipe logic
-    implementation 'com.github.SwiftyWang:AnimatePlayButton:1.4' //play_pause_stop button
 }
 
 apply plugin: 'com.google.gms.google-services' //firebase

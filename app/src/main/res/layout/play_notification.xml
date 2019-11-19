@@ -3,53 +3,40 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
-
-    <ImageButton
-        android:id="@+id/not_app_bt"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:layout_centerVertical="true"
-        android:layout_margin="@dimen/margin_std"
-        android:background="@android:color/transparent"
-        app:srcCompat="@drawable/ic_meditation_hub" />
-
+    android:layout_height="match_parent"
+    android:background="@color/colorPrimaryDark">
 
     <LinearLayout
         android:id="@+id/linearLayout"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_centerVertical="true"
-        android:layout_toEndOf="@id/not_app_bt"
-        android:layout_toRightOf="@id/not_app_bt"
+        android:layout_margin="@dimen/margin_std"
         android:orientation="vertical">
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:gravity="start"
-            android:paddingLeft="@dimen/margin_std"
-            android:paddingRight="@dimen/margin_std"
             android:text="@string/app_name"
+            android:textColor="@color/colorAccent"
             android:textSize="16sp"
             android:theme="@style/TitleTextSoundNotificatonTheme" />
 
         <TextView
-            android:id="@+id/not_med_title_tv"
+            android:id="@+id/not_title_tv"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_marginTop="2dp"
             android:gravity="start"
-            android:paddingLeft="@dimen/margin_std"
-            android:paddingRight="@dimen/margin_std"
-            android:textColor="#828282"
+            android:textColor="@color/colorAccent"
             android:textSize="14sp"
             tools:text="Meditation Title" />
 
     </LinearLayout>
 
     <ImageButton
-        android:id="@+id/ui_notification_player_button"
+        android:id="@+id/not_player_bt"
         android:layout_width="40dp"
         android:layout_height="40dp"
         android:layout_centerVertical="true"
@@ -60,20 +47,20 @@
         android:layout_toEndOf="@+id/linearLayout"
         android:layout_toRightOf="@+id/linearLayout"
         android:background="@android:color/transparent"
-        android:src="@android:drawable/ic_media_play" />
+        android:src="@android:drawable/ic_media_play"
+        android:tint="@color/colorAccent" />
 
     <ProgressBar
         android:id="@+id/not_pb"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignStart="@+id/ui_notification_player_button"
-        android:layout_alignLeft="@+id/ui_notification_player_button"
-        android:layout_alignTop="@+id/ui_notification_player_button"
-        android:layout_alignEnd="@+id/ui_notification_player_button"
-        android:layout_alignRight="@+id/ui_notification_player_button"
-        android:layout_alignBottom="@+id/ui_notification_player_button"
-        android:indeterminate="true"
-        android:theme="@style/ProgressBarSoundNotificatonTheme" />
+        android:layout_alignStart="@+id/not_player_bt"
+        android:layout_alignLeft="@+id/not_player_bt"
+        android:layout_alignTop="@+id/not_player_bt"
+        android:layout_alignEnd="@+id/not_player_bt"
+        android:layout_alignRight="@+id/not_player_bt"
+        android:layout_alignBottom="@+id/not_player_bt"
+        android:indeterminate="true" />
 
     <ImageButton
         android:id="@+id/not_close_bt"
@@ -84,5 +71,7 @@
         android:layout_centerVertical="true"
         android:layout_marginEnd="@dimen/margin_std"
         android:layout_marginRight="@dimen/margin_std"
-        android:src="@android:drawable/ic_menu_close_clear_cancel" />
+        android:background="@android:color/transparent"
+        android:src="@android:drawable/ic_menu_close_clear_cancel"
+        android:tint="@color/colorAccent" />
 </RelativeLayout>

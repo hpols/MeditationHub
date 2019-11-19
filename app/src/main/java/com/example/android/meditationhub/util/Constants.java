@@ -65,4 +65,5 @@ public class Constants {
 
     public static final String TITLE = "med_title";
     public static final String LOGIN_BOO = "is_login";
+    public static final String PLAYER_CHANGE = "play_button_update";
 }

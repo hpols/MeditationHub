@@ -1,9 +1,10 @@
 package com.example.android.meditationhub.ui;
 
-import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.graphics.Bitmap;
 import android.net.Uri;
@@ -22,7 +23,6 @@ import com.example.android.meditationhub.model.MeditationLocal;
 import com.example.android.meditationhub.player.MediaPlayerService;
 import com.example.android.meditationhub.util.Constants;
 import com.example.android.meditationhub.util.MedUtils;
-import com.swifty.animateplaybutton.AnimatePlayButton;
 
 public class PlayActivity extends AppCompatActivity {
 
@@ -34,89 +34,120 @@ public class PlayActivity extends AppCompatActivity {
     private Uri medUri;
 
     private int position;
-    public static boolean isPlaying;
 
-    private Intent mediaPlayerServiceInt;
     private MediaPlayerService mediaPlayerService;
     private boolean serviceIsBound;
+
+    private IntentFilter intentFilter;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         playBinding = DataBindingUtil.setContentView(this, R.layout.activity_player);
 
-        //retrieve information from the Service or Intent depending on the flow
-        if (MediaPlayerService.getState() != Constants.STATE_NOT_INIT) {
-            position = mediaPlayerService.getPosition();
-            selectedMed = mediaPlayerService.getSelectedMed();
-            coverArt = mediaPlayerService.getCoverArt();
-            //we don't need to retrieve URI as it is only handled in the Service
-        } else {
-            //retrieve information passed with the intent
-            selectedMed = getIntent().getParcelableExtra(Constants.SELECTED_MED);
-            medUri = getIntent().getParcelableExtra(Constants.URI);
-            coverArt = MedUtils.getCoverArt(medUri, this);
+        if (MediaPlayerService.getState() == Constants.STATE_NOT_INIT) {
+            if (savedInstanceState != null) {
+                if (savedInstanceState.containsKey(Constants.SELECTED_MED)) {
+                    selectedMed = savedInstanceState.getParcelable(Constants.SELECTED_MED);
+                }
+                if (savedInstanceState.containsKey(Constants.ART)) {
+                    coverArt = savedInstanceState.getParcelable(Constants.ART);
+                }
+            } else {
+                //retrieve information passed with the intent
+                selectedMed = getIntent().getParcelableExtra(Constants.SELECTED_MED);
+                medUri = getIntent().getParcelableExtra(Constants.URI);
+                coverArt = MedUtils.getCoverArt(medUri, this);
+                //if user has clicked play button to transition
+                if (getIntent().getBooleanExtra(Constants.IS_PLAYING, false)) {
+                    startMediaPlayerService();
+                }
+            }
+
+            initializeUI(); //setup control buttons
         }
-        initializeUI();
+
+        intentFilter = new IntentFilter(); //setup intents for broadcastreceiver
+        intentFilter.addAction(Constants.PLAYER_CHANGE);
     }
 
     private void initializeUI() {
         //setup the coverArt and titles
         MedUtils.displayCoverArt(coverArt, playBinding.thumbIv);
-        playBinding.titleTv.setText(selectedMed.getTitle());
-        playBinding.subtitleTv.setText(selectedMed.getSubtitle());
+        if (coverArt != null) {
+            playBinding.titleTv.setVisibility(View.INVISIBLE);
+            playBinding.subtitleTv.setVisibility(View.INVISIBLE);
+        } else {
+            playBinding.titleTv.setVisibility(View.VISIBLE);
+            playBinding.subtitleTv.setVisibility(View.VISIBLE);
+            playBinding.titleTv.setText(selectedMed.getTitle());
+            playBinding.subtitleTv.setText(selectedMed.getSubtitle());
+        }
 
-        playBinding.playbackControlBt.setPlayListener(new AnimatePlayButton.OnButtonsListener() {
+        playBinding.playPauseBt.setOnClickListener(new View.OnClickListener() {
             @Override
-            public boolean onPlayClick(View view) {
-                mediaPlayerServiceInt = new Intent(PlayActivity.this, MediaPlayerService.class);
-                mediaPlayerServiceInt.setAction(Constants.START_ACTION);
-                mediaPlayerServiceInt.putExtra(Constants.URI, medUri);
-                mediaPlayerServiceInt.putExtra(Constants.TITLE, selectedMed.getTitle());
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    startForegroundService(mediaPlayerServiceInt);
-                } else {
-                    startService(mediaPlayerServiceInt);
+            public void onClick(View view) {
+                switch (MediaPlayerService.getState()) {
+                    case Constants.STATE_PAUSE:
+                        mediaPlayerService.pauseAction();
+                        break;
+                    case Constants.STATE_PLAY:
+                        mediaPlayerService.playAction();
+                        break;
                 }
-                bindMediaPlayerService();
-                return true;
             }
+        });
 
+        playBinding.stopBt.setOnClickListener(new View.OnClickListener() {
             @Override
-            public boolean onPauseClick(View view) {
-                Intent pausePlayback = new Intent(PlayActivity.this, MediaPlayerService.class);
-                pausePlayback.setAction(Constants.PAUSE_ACTION);
-                PendingIntent pendingPausePlayback = PendingIntent.getService(PlayActivity.this,
-                        0, pausePlayback, PendingIntent.FLAG_UPDATE_CURRENT);
-                try {
-                    pendingPausePlayback.send();
-                } catch (PendingIntent.CanceledException e) {
-                    e.printStackTrace();
-                }
-                return true;
-            }
-
-            @Override
-            public boolean onResumeClick(View view) {
-                Intent resumePlayback = new Intent(PlayActivity.this, MediaPlayerService.class);
-                resumePlayback.setAction(Constants.PLAY_ACTION);
-                PendingIntent pendingResumePlayback = PendingIntent.getService(PlayActivity.this,
-                        0, resumePlayback, PendingIntent.FLAG_UPDATE_CURRENT);
-                try {
-                    pendingResumePlayback.send();
-                } catch (PendingIntent.CanceledException e) {
-                    e.printStackTrace();
-                }
-                return true;
-            }
-
-            @Override
-            public boolean onStopClick(View view) {
-                stopService(mediaPlayerServiceInt);
-                return true;
+            public void onClick(View view) {
+                mediaPlayerService.stopAction();
             }
         });
     }
+
+    private void updatePlayerControls() {
+        switch (MediaPlayerService.getState()) {
+            case Constants.STATE_PAUSE:
+                playBinding.playPauseBt.setImageResource(android.R.drawable.ic_media_play);
+                playBinding.stopBt.setVisibility(View.VISIBLE);
+                break;
+            case Constants.STATE_PLAY:
+            case Constants.STATE_PREPARE:
+                playBinding.playPauseBt.setImageResource(android.R.drawable.ic_media_pause);
+                playBinding.stopBt.setVisibility(View.VISIBLE);
+                break;
+            case Constants.STATE_NOT_INIT:
+                playBinding.playPauseBt.setImageResource(android.R.drawable.ic_media_play);
+                playBinding.stopBt.setVisibility(View.INVISIBLE);
+                break;
+        }
+    }
+
+    private void startMediaPlayerService() {
+        Intent mediaPlayerServiceInt = new Intent(this, MediaPlayerService.class);
+        mediaPlayerServiceInt.setAction(Constants.START_ACTION);
+        mediaPlayerServiceInt.putExtra(Constants.URI, medUri);
+        mediaPlayerServiceInt.putExtra(Constants.TITLE, selectedMed.getTitle());
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(mediaPlayerServiceInt);
+        } else {
+            startService(mediaPlayerServiceInt);
+        }
+        bindMediaPlayerService();
+
+    }
+
+    //stay up to date with playback controls in the UI
+    private BroadcastReceiver updatePlayBtReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent.getAction() != null && intent.getAction().equals(Constants.PLAYER_CHANGE)) {
+                updatePlayerControls();
+            }
+        }
+    };
 
     //monitor state of the service
     private ServiceConnection mediaPlayerConnection = new ServiceConnection() {
@@ -124,6 +155,16 @@ public class PlayActivity extends AppCompatActivity {
         public void onServiceConnected(ComponentName name, IBinder service) {
             mediaPlayerService = ((MediaPlayerService.MyBinder) service).getService();
             serviceIsBound = true;
+
+            if (mediaPlayerService.isBindIsOngoing()) {
+                position = mediaPlayerService.getPosition();
+                selectedMed = mediaPlayerService.getSelectedMed();
+                coverArt = mediaPlayerService.getCoverArt();
+
+                updatePlayerControls();
+
+                initializeUI(); //setup control buttons
+            }
         }
 
         @Override
@@ -137,6 +178,8 @@ public class PlayActivity extends AppCompatActivity {
     private void unbindMediaPlayerService() {
         mediaPlayerService.setCoverArt(coverArt);
         mediaPlayerService.setSelectedMed(selectedMed);
+
+        mediaPlayerService.setBindIsOngoing(true);
 
         unbindService(mediaPlayerConnection);
         serviceIsBound = false;
@@ -162,6 +205,8 @@ public class PlayActivity extends AppCompatActivity {
         if (MediaPlayerService.getState() != Constants.STATE_NOT_INIT) {
             bindMediaPlayerService();
         }
+
+        registerReceiver(updatePlayBtReceiver, intentFilter);
     }
 
     @Override
@@ -170,11 +215,23 @@ public class PlayActivity extends AppCompatActivity {
         if (MediaPlayerService.getState() != Constants.STATE_NOT_INIT) {
             unbindMediaPlayerService();
         }
+
+        unregisterReceiver(updatePlayBtReceiver);
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if (MediaPlayerService.getState() == Constants.STATE_NOT_INIT) {
+            outState.putParcelable(Constants.SELECTED_MED, selectedMed);
+            outState.putParcelable(Constants.ART, coverArt);
+        } else {
+            outState.clear(); //making sure nothing hangs around we don't need from previous saves.
+        }
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-
     }
 }

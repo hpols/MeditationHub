@@ -1,23 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal">
 
     <TextView
         android:id="@+id/snackbar_text"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_gravity="center_vertical|start"
         android:layout_weight="1"
         android:ellipsize="end"
         android:maxLines="@integer/design_snackbar_text_max_lines"
-        android:paddingLeft="@dimen/design_snackbar_padding_horizontal"
-        android:paddingTop="@dimen/design_snackbar_padding_vertical"
-        android:paddingRight="@dimen/design_snackbar_padding_horizontal"
-        android:paddingBottom="@dimen/design_snackbar_padding_vertical"
-        android:text="Downloading: TITLE"
-        android:textAppearance="@style/TextAppearance.Design.Snackbar.Message" />
+        android:padding="@dimen/margin_std"
+        android:textAppearance="@style/TextAppearance.Design.Snackbar.Message"
+        android:textColor="@color/colorAccent"
+        tools:text="Downloading: TITLE" />
 
     <ProgressBar
         android:id="@+id/circularProgressbar"

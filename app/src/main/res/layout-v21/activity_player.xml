@@ -46,19 +46,30 @@
             app:layout_constraintStart_toStartOf="@+id/title_tv"
             tools:text="Subtitle of the Meditation" />
 
-        <com.swifty.animateplaybutton.AnimatePlayButton
-            android:id="@+id/playback_control_bt"
-            android:layout_width="match_parent"
+        <ImageButton
+            android:id="@+id/play_pause_bt"
+            android:layout_width="wrap_content"
             android:layout_height="60dp"
             android:layout_margin="@dimen/margin_std"
-            app:ap_animation_duration="250"
-            app:ap_border_color="@color/colorPrimary"
-            app:ap_button_background="@drawable/circle_primary_bg"
-            app:ap_button_color="@color/colorAccent"
-            app:ap_button_size="60dp"
+            android:background="@android:color/transparent"
+            android:tint="@color/colorAccent"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@+id/duration_tv"
-            app:layout_constraintStart_toEndOf="@+id/position_tv" />
+            app:layout_constraintEnd_toStartOf="@+id/stop_bt"
+            app:layout_constraintStart_toEndOf="@+id/position_tv"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintHorizontal_chainStyle="packed"
+            app:srcCompat="@android:drawable/ic_media_play" />
+
+        <Button
+            android:id="@+id/stop_bt"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_margin="@dimen/margin_std"
+            android:background="@color/colorAccent"
+            app:layout_constraintBottom_toBottomOf="@+id/play_pause_bt"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/play_pause_bt"
+            app:layout_constraintTop_toTopOf="@+id/play_pause_bt" />
 
         <TextView
             android:id="@+id/position_tv"
@@ -86,7 +97,7 @@
             android:layout_margin="@dimen/margin_std"
             android:layout_weight="1"
             android:progressBackgroundTint="@color/colorPrimary"
-            app:layout_constraintBottom_toTopOf="@+id/playback_control_bt"
+            app:layout_constraintBottom_toTopOf="@+id/play_pause_bt"
             app:layout_constraintEnd_toStartOf="@+id/duration_tv"
             app:layout_constraintStart_toEndOf="@+id/position_tv" />
 

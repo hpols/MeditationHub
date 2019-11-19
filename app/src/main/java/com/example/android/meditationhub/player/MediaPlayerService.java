@@ -8,11 +8,11 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Binder;
-import android.os.Build;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.util.Log;
@@ -23,6 +23,7 @@ import androidx.core.app.NotificationCompat;
 
 import com.example.android.meditationhub.R;
 import com.example.android.meditationhub.model.MeditationLocal;
+import com.example.android.meditationhub.ui.PlayActivity;
 import com.example.android.meditationhub.util.Constants;
 
 /**
@@ -41,36 +42,16 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
     private Uri medUri;
     private String medTitle;
     private final Object lock = new Object();
-    //private final Handler handler = new Handler();
     private MediaPlayer mediaPlayer;
     private NotificationManager notMan;
-    private NotificationCompat.Builder notBuilder;
-    private Notification not;
     private PowerManager.WakeLock wakeLock;
     private RemoteViews remoteViews;
 
     PendingIntent notPender, pausePender, resumePender, stopPender;
+    int position;
 
-    //    private Handler timerUpdateHandler = new Handler();
-//    private Runnable timerUpdateRunnable = new Runnable() {
-//
-//        @Override
-//        public void run() {
-//            notMan.notify(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE,
-//                    prepareNotification());
-//            timerUpdateHandler.postDelayed(this,
-//                    Constants.DELAY_UPDATE_NOTIFICATION_FOREGROUND_SERVICE);
-//        }
-//    };
-//    private Runnable delayedShutdown = new Runnable() {
-//
-//        public void run() {
-//            unlockCPU();
-//            stopForeground(true);
-//            stopSelf();
-//        }
-//
-//    };
+    boolean bindIsOngoing;
+
     public MediaPlayerService() {
     }
 
@@ -103,6 +84,15 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
 
         Log.d(TAG, "onCreate()");
         stateService = Constants.STATE_NOT_INIT;
+        notMan = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+
+        //create the necessary pendingIntents.
+        notPender = createPender(Constants.MAIN_ACTION, Intent.FLAG_ACTIVITY_NEW_TASK);
+        pausePender = createPender(Constants.PAUSE_ACTION, 0);
+        resumePender = createPender(Constants.PLAY_ACTION, 0);
+        stopPender = createPender(Constants.STOP_ACTION, 0);
+
+        remoteViews = new RemoteViews(getPackageName(), R.layout.play_notification);
     }
 
     @Override
@@ -124,44 +114,37 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
                     coverArt = (Bitmap) intent.getExtras().get(Constants.ART);
                 }
                 stateService = Constants.STATE_PREPARE;
-                setUpNotification();
-                //startForeground(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE, prepareNotification());
+                startForeground(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE, prepareNotification());
                 destroyPlayer();
                 initPlayer();
                 play();
                 break;
 
             case Constants.PAUSE_ACTION:
-                stateService = Constants.STATE_PAUSE;
-                updateNotification();
-                //notMan.notify(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE, prepareNotification());
-                Log.i(TAG, "Clicked Pause");
-                destroyPlayer();
-                //handler.postDelayed(delayedShutdown, Constants.DELAY_SHUTDOWN_FOREGROUND_SERVICE);
+                pauseAction();
                 break;
 
             case Constants.PLAY_ACTION:
-                stateService = Constants.STATE_PREPARE;
-                updateNotification();
-                //notMan.notify(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE, prepareNotification());
-                Log.i(TAG, "Clicked Play");
-                destroyPlayer();
-                initPlayer();
-                play();
+                playAction();
                 break;
 
             case Constants.STOP_ACTION:
-                Log.i(TAG, "Received Stop Intent");
-                destroyPlayer();
-                stopForeground(true);
-                stopSelf();
+                stopAction();
                 break;
 
             default:
                 stopForeground(true);
+                broadcastPlayerChange();
                 stopSelf();
         }
         return START_NOT_STICKY;
+    }
+
+    private void broadcastPlayerChange() {
+        Intent broadCastPlayerChange = new Intent();
+        broadCastPlayerChange.setAction(Constants.PLAYER_CHANGE);
+        sendBroadcast(broadCastPlayerChange);
+
     }
 
     @Override
@@ -169,11 +152,6 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
         Log.d(TAG, "onDestroy()");
         destroyPlayer();
         stateService = Constants.STATE_NOT_INIT;
-        try {
-            //timerUpdateHandler.removeCallbacksAndMessages(null);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
         super.onDestroy();
     }
 
@@ -190,15 +168,14 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
             }
         }
         unlockCPU();
-
     }
 
     public boolean onError(MediaPlayer mp, int what, int extra) {
+
         Log.d(TAG, "Player onError() what:" + what);
         destroyPlayer();
         //handler.postDelayed(delayedShutdown, Constants.DELAY_SHUTDOWN_FOREGROUND_SERVICE);
-        updateNotification();
-        //notMan.notify(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE, prepareNotification());
+        notMan.notify(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE, prepareNotification());
         stateService = Constants.STATE_PAUSE;
         return false;
     }
@@ -220,12 +197,6 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
     }
 
     private void play() {
-        try {
-            //handler.removeCallbacksAndMessages(null);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
         synchronized (lock) {
             try {
                 if (mediaPlayer == null) {
@@ -243,61 +214,50 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
         }
     }
 
-    // call this method to setup notification for the first time
-    private void setUpNotification() {
-
-        notMan = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-
-        notPender = createPender(Constants.MAIN_ACTION, Intent.FLAG_ACTIVITY_NEW_TASK);
-        pausePender = createPender(Constants.PAUSE_ACTION, 0);
-        resumePender = createPender(Constants.PLAY_ACTION, 0);
-        stopPender = createPender(Constants.STOP_ACTION, 0);
-
-        // we need to build a basic notification first, then update it
-        Intent notIntent = new Intent(this, MediaPlayerService.class);
-        notIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        PendingIntent pendIntent = PendingIntent.getActivity(this, 0, notIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT);
-
-        // notification's layout
-        remoteViews = new RemoteViews(getPackageName(), R.layout.radio_notification);
-        // notification's title
-        remoteViews.setTextViewText(R.id.not_med_title_tv, medTitle);
-        remoteViews.setOnClickPendingIntent(R.id.not_close_bt, stopPender);
-
-        notBuilder = new NotificationCompat.Builder(this, FOREGROUND_CHANNEL_ID);
-
-        int apiVersion = Build.VERSION.SDK_INT;
-
-        if (apiVersion < Build.VERSION_CODES.HONEYCOMB) {
-            not = new Notification(R.drawable.ic_launcher_foreground, medTitle, System.currentTimeMillis());
-            not.contentView = remoteViews;
-            not.contentIntent = pendIntent;
-
-            not.flags |= Notification.FLAG_NO_CLEAR; //Do not clear the notification
-            not.defaults |= Notification.DEFAULT_LIGHTS;
-
-            // starting service with notification in foreground mode
-            startForeground(Constants.NOTIFICATION_ID, not);
-
-        } else {
-            notBuilder.setSmallIcon(R.drawable.ic_launcher_foreground)
-                    .setAutoCancel(false)
-                    .setOngoing(true)
-                    .setContentIntent(pendIntent)
-                    .setContent(remoteViews)
-                    .setTicker(medTitle);
-
-            // starting service with notification in foreground mode
-            startForeground(Constants.NOTIFICATION_ID, notBuilder.build());
-        }
+    public void pauseAction() {
+        setPosition(mediaPlayer.getCurrentPosition());
+        stateService = Constants.STATE_PAUSE;
+        notMan.notify(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE, prepareNotification());
+        broadcastPlayerChange();
+        Log.i(TAG, "Clicked Pause");
+        destroyPlayer();
     }
 
-    // use this method to update the Notification's UI
-    private void updateNotification() {
+    public void playAction() {
+        stateService = Constants.STATE_PLAY;
+        notMan.notify(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE, prepareNotification());
+        broadcastPlayerChange();
+        Log.i(TAG, "Clicked Play");
+        destroyPlayer();
+        initPlayer();
+        play();
+    }
 
-        int api = Build.VERSION.SDK_INT;
-        // update the icon
+    public void stopAction() {
+        Log.i(TAG, "Received Stop Intent");
+        setBindIsOngoing(false);
+        stateService = Constants.STATE_NOT_INIT;
+        position = 0;
+        broadcastPlayerChange();
+        destroyPlayer();
+        stopForeground(true);
+        stopSelf();
+    }
+
+    private Notification prepareNotification() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O &&
+                notMan.getNotificationChannel(FOREGROUND_CHANNEL_ID) == null) {
+            // The user-visible name of the channel.
+            int importance = NotificationManager.IMPORTANCE_HIGH;
+            NotificationChannel channel = new NotificationChannel(FOREGROUND_CHANNEL_ID,
+                    getString(R.string.app_name), importance);
+            channel.setSound(null, null);
+            channel.enableVibration(false);
+            notMan.createNotificationChannel(channel);
+        }
+
+        remoteViews.setOnClickPendingIntent(R.id.not_close_bt, stopPender);
+        remoteViews.setTextViewText(R.id.not_title_tv, medTitle);
 
         switch (stateService) {
             case Constants.STATE_PAUSE:
@@ -306,47 +266,18 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
             case Constants.STATE_PLAY:
                 updateRv(View.INVISIBLE, pausePender, android.R.drawable.ic_media_pause);
                 break;
+            case Constants.STATE_PREPARE:
+                updateRv(View.VISIBLE, pausePender, android.R.drawable.ic_media_pause);
+                break;
         }
-
-
-        // update the notification
-        if (api < Build.VERSION_CODES.HONEYCOMB) {
-            notMan.notify(Constants.NOTIFICATION_ID, not);
-        } else {
-            notMan.notify(Constants.NOTIFICATION_ID, notBuilder.build());
-        }
-    }
-
-    private Notification prepareNotification() {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O &&
-                notMan.getNotificationChannel(FOREGROUND_CHANNEL_ID) == null) {
-            // The user-visible name of the channel.
-            CharSequence name = getString(R.string.app_name);
-            int importance = NotificationManager.IMPORTANCE_HIGH;
-            NotificationChannel channel = new NotificationChannel(FOREGROUND_CHANNEL_ID, name,
-                    importance);
-            channel.setSound(null, null);
-            channel.enableVibration(false);
-            notMan.createNotificationChannel(channel);
-        }
-
-        //create the necessary pendingIntents.
-        notPender = createPender(Constants.MAIN_ACTION, Intent.FLAG_ACTIVITY_NEW_TASK);
-        pausePender = createPender(Constants.PAUSE_ACTION, 0);
-        resumePender = createPender(Constants.PLAY_ACTION, 0);
-        stopPender = createPender(Constants.STOP_ACTION, 0);
-
-        remoteViews = new RemoteViews(getPackageName(), R.layout.radio_notification);
-        remoteViews.setTextViewText(R.id.not_med_title_tv, medTitle);
-        remoteViews.setOnClickPendingIntent(R.id.not_close_bt, stopPender);
-
-        updateRv(View.VISIBLE, pausePender, android.R.drawable.ic_media_pause);
 
         NotificationCompat.Builder notBuild;
         notBuild = new NotificationCompat.Builder(this,
                 FOREGROUND_CHANNEL_ID);
         notBuild.setContent(remoteViews)
-                .setSmallIcon(R.mipmap.ic_launcher)
+                .setLargeIcon(BitmapFactory.decodeResource(getResources(),
+                        R.drawable.ic_meditation_hub))
+                .setSmallIcon(R.drawable.ic_meditation_hub)
                 .setCategory(NotificationCompat.CATEGORY_SERVICE)
                 .setOnlyAlertOnce(true)
                 .setOngoing(true)
@@ -367,8 +298,8 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
      */
     private void updateRv(int visibility, PendingIntent pender, int icon) {
         remoteViews.setViewVisibility(R.id.not_pb, visibility);
-        remoteViews.setOnClickPendingIntent(R.id.ui_notification_player_button, pender);
-        remoteViews.setImageViewResource(R.id.ui_notification_player_button, icon);
+        remoteViews.setOnClickPendingIntent(R.id.not_player_bt, pender);
+        remoteViews.setImageViewResource(R.id.not_player_bt, icon);
     }
 
     /**
@@ -379,7 +310,15 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
      * @return the pendingIntent for further use
      */
     private PendingIntent createPender(String action, int flag) {
-        Intent intent = new Intent(this, MediaPlayerService.class);
+
+        Intent intent;
+
+        if (action.equals(Constants.MAIN_ACTION)) {
+            intent = new Intent(this, PlayActivity.class);
+        } else {
+            intent = new Intent(this, MediaPlayerService.class);
+        }
+
         if (flag != 0) {
             intent.setFlags(flag);
         }
@@ -395,15 +334,17 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
     public void onPrepared(MediaPlayer mp) {
         Log.d(TAG, "Player onPrepared()");
         stateService = Constants.STATE_PLAY;
-        setUpNotification();
-        //notMan.notify(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE, prepareNotification());
+        notMan.notify(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE, prepareNotification());
         try {
             mediaPlayer.setWakeMode(this, PowerManager.PARTIAL_WAKE_LOCK);
         } catch (Exception e) {
             e.printStackTrace();
         }
+        if (position != 0) {
+            mediaPlayer.seekTo(position);
+        }
         mediaPlayer.start();
-        //timerUpdateHandler.postDelayed(timerUpdateRunnable, 0);
+        broadcastPlayerChange();
     }
 
     @Override
@@ -417,7 +358,7 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
             return;
         }
         wakeLock = powMan.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, this.getClass().getSimpleName());
-        wakeLock.acquire();
+        wakeLock.acquire(1000);
         Log.d(TAG, "Player lockCPU()");
     }
 
@@ -430,7 +371,11 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
     }
 
     public int getPosition() {
-        return mediaPlayer.getCurrentPosition();
+        return position;
+    }
+
+    public void setPosition(int position) {
+        this.position = position;
     }
 
     public MeditationLocal getSelectedMed() {
@@ -464,4 +409,14 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
     public void setMedTitle(String medTitle) {
         this.medTitle = medTitle;
     }
+
+    public boolean isBindIsOngoing() {
+        return bindIsOngoing;
+    }
+
+    public void setBindIsOngoing(boolean bindIsOngoing) {
+        this.bindIsOngoing = bindIsOngoing;
+    }
+
+
 }

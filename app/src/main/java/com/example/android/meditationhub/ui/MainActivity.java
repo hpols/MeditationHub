@@ -1,10 +1,14 @@
 package com.example.android.meditationhub.ui;
 
+import android.app.ActivityOptions;
+import android.app.AlertDialog;
 import android.app.DownloadManager;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -14,6 +18,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
@@ -36,6 +41,7 @@ import com.example.android.meditationhub.model.MeditationFireBase;
 import com.example.android.meditationhub.model.MeditationLocal;
 import com.example.android.meditationhub.model.MeditationLocalDb;
 import com.example.android.meditationhub.model.MeditationLocalViewModel;
+import com.example.android.meditationhub.util.Constants;
 import com.example.android.meditationhub.util.EntryExecutor;
 import com.example.android.meditationhub.util.MedUtils;
 import com.google.android.material.snackbar.Snackbar;
@@ -118,7 +124,7 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
         viewModel.getMeditationLocalEntries().observe(this, new Observer<List<MeditationLocal>>() {
             @Override
             public void onChanged(@Nullable List<MeditationLocal> meditationLocals) {
-                Log.d(TAG,"Updating entries from LiveData in ViewModel");
+                Log.d(TAG, "Updating entries from LiveData in ViewModel");
                 createOrderedItemList(meditationLocals);
 
                 medAdapter = new MeditationAdapter(MainActivity.this, fireAuth, items,
@@ -131,7 +137,7 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
                 layoutMan.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
                     @Override
                     public int getSpanSize(int position) {
-                        switch(medAdapter.getItemViewType(position)){
+                        switch (medAdapter.getItemViewType(position)) {
                             case ItemList.TYPE_HEADER:
                                 return numOfCol;
                             case ItemList.TYPE_ITEM:
@@ -161,22 +167,6 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
                 items.add(meditationLocals.get(i));
                 prevCategory = currCategory;
             }
-        }
-    }
-
-    @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        super.onSaveInstanceState(outState);
-        if (medAdapter != null) {
-            medAdapter.saveStates(outState);
-        }
-    }
-
-    @Override
-    protected void onRestoreInstanceState(Bundle savedInstanceState) {
-        super.onRestoreInstanceState(savedInstanceState);
-        if (medAdapter != null) {
-            medAdapter.restoreStates(savedInstanceState);
         }
     }
 
@@ -249,6 +239,22 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
         return super.onOptionsItemSelected(item);
     }
 
+    @Override
+    public void goToPlayer(MeditationLocal selectedMed, Uri medUri, ImageView thumbIv, boolean play) {
+        Intent openPlayer = new Intent(this, PlayActivity.class);
+        openPlayer.putExtra(Constants.SELECTED_MED, selectedMed);
+        openPlayer.putExtra(Constants.URI, medUri);
+        openPlayer.putExtra(Constants.IS_PLAYING, play);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            Bundle transitionBundle = ActivityOptions.makeSceneTransitionAnimation(this,
+                    thumbIv, thumbIv.getTransitionName()).toBundle();
+            startActivity(openPlayer, transitionBundle);
+        } else {
+            startActivity(openPlayer);
+        }
+    }
+
     /**
      * download the meditation. In part based on: https://gist.github.com/emaillenin/9a0fea5a6924ddb23b8dd620392e745f
      *
@@ -281,7 +287,7 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
         //set up the download manager and the file destination
         final DownloadManager dlManager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
         String destination = Environment.getExternalStorageDirectory() + "/MeditationHub";
-        Log.v(TAG,"destination: " + destination);
+        Log.v(TAG, "destination: " + destination);
 
         //ensure the folder exists before continuing
         File file = new File(destination);
@@ -344,7 +350,7 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
                                     @Override
                                     public void run() {
                                         snackProg.setProgress(dlProgress);
-                                        Log.v(TAG,"Progress: downloaded: " + bytesLoaded +
+                                        Log.v(TAG, "Progress: downloaded: " + bytesLoaded +
                                                 " from total: " + bytesTotal + "=" + dlProgress);
                                     }
                                 });
@@ -355,14 +361,14 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
 
                             final Uri contentUri = FileProvider.getUriForFile(MainActivity.this,
                                     BuildConfig.APPLICATION_ID + ".file_provider", new File(finalDestination));
-                            Log.v(TAG,"content Uri of downloaded audio: " + contentUri);
+                            Log.v(TAG, "content Uri of downloaded audio: " + contentUri);
 
                             EntryExecutor.getInstance().diskIO().execute(new Runnable() {
                                 @Override
                                 public void run() {
                                     selectedMed.setStorage(String.valueOf(contentUri));
                                     meditationLocalDb.meditationLocalDao().updateEntry(selectedMed);
-                                    Log.v(TAG,"Updated meditation: " + selectedMed.toString());
+                                    Log.v(TAG, "Updated meditation: " + selectedMed.toString());
                                 }
                             });
                             bar.dismiss();
@@ -372,7 +378,7 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
                             break;
                     }
 
-                    Log.d(TAG,msg);
+                    Log.d(TAG, msg);
                     csr.close();
                 }
             }
@@ -383,78 +389,57 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
 
     }
 
-    @Override
-    public void remove(final int medPos, final MeditationLocal selectedMed) {
-//        //access preferences to note whether the alert is required/wished
-//        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
-//        final SharedPreferences.Editor sharedPrefEd = sharedPref.edit();
-//        final String ALERT_NEEDED = "alert needed";
-//
-//        //show alert along with the opt-out checkbox
-//        if (sharedPref.getBoolean(ALERT_NEEDED, true)) {
-//            AlertDialog.Builder alertBuild = new AlertDialog.Builder(this, R.style.dialog);
-//            alertBuild.setTitle(R.string.alert_title);
-//
-//            final boolean[] checked = new boolean[]{true};
-//            alertBuild.setMultiChoiceItems(new String[]{getString(R.string.alert_cb)}, checked,
-//                    new DialogInterface.OnMultiChoiceClickListener() {
-//                        @Override
-//                        public void onClick(DialogInterface dialogInterface, int i, boolean b) {
-//                            checked[i] = b;
-//                        }
-//                    });
-//            alertBuild.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-//                @Override
-//                public void onClick(DialogInterface dialog, int which) {
-//                    removeFile(medPos, selectedMed);
-//                    if (checked[0]) {//show alert again next time
-//                        sharedPrefEd.putBoolean(ALERT_NEEDED, true);
-//                    } else { //no longer show alert
-//                        sharedPrefEd.putBoolean(ALERT_NEEDED, false);
-//                    }
-//                    sharedPrefEd.apply();
-//                }
-//            });
-//            alertBuild.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-//                @Override
-//                public void onClick(DialogInterface dialog, int which) {
-//                    medAdapter.notifyItemChanged(medPos);
-//                }
-//            });
-//
-//            AlertDialog alertDialog = alertBuild.create();
-//            alertDialog.show();
-//        } else {//directly call the move method, alert is no longer needed.
-        removeFile(medPos, selectedMed);
-//        }
-    }
-
     /**
      * remove the audio file from the device
      *
      * @param medPos      of the meditation in the adapter.
      * @param selectedMed is the selected meditation
      */
-    private void removeFile(final int medPos, final MeditationLocal selectedMed) {
+    @Override
+    public void remove(final int medPos, final MeditationLocal selectedMed) {
 
-        Uri uriToBeRemoved = Uri.parse(selectedMed.getStorage());
-        int i = getContentResolver().delete(uriToBeRemoved, null, null);
+        final String removeText = getString((R.string.alert_title), selectedMed.getTitle());
 
-        if (i > -1) {
-            EntryExecutor.getInstance().diskIO().execute(new Runnable() {
-                @Override
-                public void run() {
-                    selectedMed.setStorage(null);
-                    int u = meditationLocalDb.meditationLocalDao().updateEntry(selectedMed);
-                }
+        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this, R.style.dialog);
 
-                @Override
-                protected void finalize() throws Throwable {
-                    super.finalize();
-                    medAdapter.notifyItemChanged(medPos);
-                }
-            });
+        // set dialog message
+        alertDialogBuilder
+                .setTitle(removeText)
+                .setMessage(R.string.alert_text)
+                .setCancelable(false)
+                .setPositiveButton("Yes",new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog,int id) {
+                        // if this button is clicked proceed with removing file
+                        Uri uriToBeRemoved = Uri.parse(selectedMed.getStorage());
+                        int i = getContentResolver().delete(uriToBeRemoved, null, null);
 
-        }
+                        if (i > -1) {
+                            EntryExecutor.getInstance().diskIO().execute(new Runnable() {
+                                @Override
+                                public void run() {
+                                    selectedMed.setStorage(null);
+                                    meditationLocalDb.meditationLocalDao().updateEntry(selectedMed);
+                                }
+
+                                @Override
+                                protected void finalize() throws Throwable {
+                                    super.finalize();
+                                    medAdapter.notifyItemChanged(medPos);
+                                }
+                            });
+
+                        }
+                    }
+                })
+                .setNegativeButton("No",new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog,int id) {
+                        dialog.cancel();
+                    }
+                });
+
+        AlertDialog alertDialog = alertDialogBuilder.create();
+        alertDialog.show();
+
     }
+
 }

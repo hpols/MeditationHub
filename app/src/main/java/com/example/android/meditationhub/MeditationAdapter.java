@@ -2,41 +2,25 @@ package com.example.android.meditationhub;
 
 import android.Manifest;
 import android.app.Activity;
-import android.app.ActivityOptions;
 import android.content.Context;
-import android.content.Intent;
-import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.net.Uri;
-import android.os.Build;
-import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.CompoundButton;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.cardview.widget.CardView;
-import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.chauthai.swipereveallayout.SwipeRevealLayout;
-import com.chauthai.swipereveallayout.ViewBinderHelper;
 import com.example.android.meditationhub.model.Header;
 import com.example.android.meditationhub.model.ItemList;
 import com.example.android.meditationhub.model.MeditationLocal;
-import com.example.android.meditationhub.model.MeditationLocalDb;
-import com.example.android.meditationhub.ui.PlayActivity;
-import com.example.android.meditationhub.util.Constants;
 import com.example.android.meditationhub.util.MedUtils;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -63,15 +47,13 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
 
     private List<MeditationLocal> meditations;
     private List<ItemList> items;
-    private MeditationLocalDb meditationLocalDb;
 
-    //alert the MainActivity of download related information
+    //keep intouch with MainActivity through this interface (clicks, downloads, removes)
     private final AdapterInterface adapterInterface;
 
-    // This object helps you save/restore the open/close state of each view
-    private final ViewBinderHelper viewBinderHelper = new ViewBinderHelper();
-
     public interface AdapterInterface {
+        void goToPlayer(MeditationLocal selectedMed, Uri medUri, ImageView thumbIv, boolean play);
+
         void download(Uri uri, MeditationLocal filename, int medPos);
 
         void remove(int medPos, MeditationLocal selectedMed);
@@ -84,22 +66,20 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
         this.adapterInterface = adapterInterface;
 
         user = mAuth.getCurrentUser();
-        meditationLocalDb = MeditationLocalDb.getInstance(ctxt);
-        viewBinderHelper.setOpenOnlyOne(true); //only allow one viewholder to be swiped at a time
     }
 
     @NonNull
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int viewType) {
 
-        if(viewType == ItemList.TYPE_HEADER) {
+        if (viewType == ItemList.TYPE_HEADER) {
 
             View root = LayoutInflater.from(ctxt).inflate(R.layout.header_item, viewGroup,
                     false);
             return new HeaderVH(root);
-        } else if (viewType == ItemList.TYPE_ITEM){
+        } else if (viewType == ItemList.TYPE_ITEM) {
 
-            View root = LayoutInflater.from(ctxt).inflate(R.layout.swiping_recycler, viewGroup,
+            View root = LayoutInflater.from(ctxt).inflate(R.layout.meditation_item, viewGroup,
                     false);
 
             root.setFocusable(true);
@@ -111,7 +91,7 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
     }
 
     @Override
-    public void onBindViewHolder(@NonNull final RecyclerView.ViewHolder Vh, int position) {
+    public void onBindViewHolder(@NonNull final RecyclerView.ViewHolder Vh, final int position) {
 
         if (Vh instanceof HeaderVH) {
             final HeaderVH headVh = (HeaderVH) Vh;
@@ -124,16 +104,12 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
             //check whether Meditation or header
             final int medPos = position;
 
-            final MeditationLocal selectedMed = (MeditationLocal)items.get(position);
+            final MeditationLocal selectedMed = (MeditationLocal) items.get(position);
 
-            // Save/restore the open/close state.
-            // You need to provide a String id which uniquely defines the data object.
-            viewBinderHelper.bind(medVh.swipeRevealLayout, selectedMed.getId());
+            Log.d(TAG, "this meditation = " + selectedMed.toString());
 
-            Log.d(TAG,"this meditation = " + selectedMed.toString());
-
-            String removeText = ctxt.getString((R.string.alert_title), selectedMed.getTitle());
-            medVh.alertTv.setText(removeText);
+            final String removeText = ctxt.getString((R.string.alert_title), selectedMed.getTitle());
+            //medVh.alertTv.setText(removeText);
 
             //set Action image and its responses to clicks
             int actionImage = android.R.drawable.stat_sys_download;
@@ -146,12 +122,12 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
                 medVh.titleTv.setText(selectedMed.getTitle());
                 medVh.subtitleTv.setText(selectedMed.getSubtitle());
 
-                viewBinderHelper.lockSwipe(String.valueOf(medPos));
+                //viewBinderHelper.lockSwipe(String.valueOf(medPos));
             } else {
                 actionImage = android.R.drawable.ic_media_play;
-                medVh.thumbIv.setAlpha((float)1.0);
+                medVh.thumbIv.setAlpha((float) 1.0);
                 medVh.medUri = MedUtils.getUri(selectedMed, ctxt);
-                viewBinderHelper.unlockSwipe(String.valueOf(medPos));
+                //viewBinderHelper.unlockSwipe(String.valueOf(medPos));
 
                 medVh.coverArt = MedUtils.getCoverArt(medVh.medUri, ctxt);
                 MedUtils.displayCoverArt(medVh.coverArt, medVh.thumbIv);
@@ -212,31 +188,25 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
                                     });
                         } else {
                             //start mediaPlayer
-                            goToPlayer(selectedMed, medVh.medUri, medVh.thumbIv);
+                            adapterInterface.goToPlayer(selectedMed, medVh.medUri, medVh.thumbIv, true);
                         }
                     }
                 }
             });
-            medVh.itemView.setOnClickListener(new View.OnClickListener() {
+
+            medVh.thumbIv.setOnClickListener(new View.OnClickListener() {
                 @Override
-                public void onClick(View v) {
-                    goToPlayer(selectedMed, medVh.medUri, medVh.thumbIv);
+                public void onClick(View view) {
+                    adapterInterface.goToPlayer(selectedMed, medVh.medUri, medVh.thumbIv, false);
                 }
             });
-        }
-    }
-
-    private void goToPlayer(MeditationLocal selectedMed, Uri medUri, ImageView thumbIv) {
-        Intent openPlayer = new Intent(ctxt, PlayActivity.class);
-        openPlayer.putExtra(Constants.SELECTED_MED, selectedMed);
-        openPlayer.putExtra(Constants.URI, medUri);
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            Bundle transitionBundle = ActivityOptions.makeSceneTransitionAnimation((Activity) ctxt,
-                    thumbIv, thumbIv.getTransitionName()).toBundle();
-            ctxt.startActivity(openPlayer, transitionBundle);
-        } else {
-            ctxt.startActivity(openPlayer);
+            medVh.thumbIv.setOnLongClickListener(new View.OnLongClickListener() {
+                @Override
+                public boolean onLongClick(View view) {
+                    removeAudio(position, selectedMed);
+                    return false;
+                }
+            });
         }
     }
 
@@ -254,21 +224,12 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
         user = null;
     }
 
-    public void removeAudio(final int position) {
-        MeditationLocal selectedMed = meditations.get(position);
+    public void removeAudio(final int position, MeditationLocal selectedMed) {
         if (selectedMed.getStorage().isEmpty()) {
-            Toast.makeText(ctxt, "Swiping left or right will remove the audio of a meditation from your device. However, this one is not on yur device.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(ctxt, "A long click will remove the audio of a meditation from your device. However, this one is not on yur device.", Toast.LENGTH_SHORT).show();
         } else {
             adapterInterface.remove(position, selectedMed);
         }
-    }
-
-    public void saveStates(Bundle outState) {
-        viewBinderHelper.saveStates(outState);
-    }
-
-    public void restoreStates(Bundle inState) {
-        viewBinderHelper.restoreStates(inState);
     }
 
     class HeaderVH extends RecyclerView.ViewHolder {
@@ -287,14 +248,6 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
         ImageButton actionIb;
         ImageView thumbIv;
 
-        SwipeRevealLayout swipeRevealLayout;
-        ConstraintLayout swipeReveal;
-        CardView swipeMain;
-        Button okBt;
-        Button cancelBt;
-        CheckBox alertCb;
-        TextView alertTv;
-
         Bitmap coverArt = null;
         Uri medUri;
 
@@ -306,46 +259,11 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
 
             view.getLayoutParams().width = displaymetrics.widthPixels / MedUtils.noOfCols(ctxt);
 
-            swipeRevealLayout = itemView.findViewById(R.id.swipe_layout);
-            swipeReveal = itemView.findViewById(R.id.swipe_reveal);
-            swipeMain = itemView.findViewById(R.id.swipe_main);
-
             titleTv = itemView.findViewById(R.id.title_tv);
             subtitleTv = itemView.findViewById(R.id.subtitle_tv);
             actionIb = itemView.findViewById(R.id.action_ib);
             thumbIv = itemView.findViewById(R.id.thumb_iv);
 
-            okBt = itemView.findViewById(R.id.alert_ok_bt);
-            cancelBt = itemView.findViewById(R.id.alert_cancel_bt);
-            alertCb = itemView.findViewById(R.id.alert_cb);
-            alertTv = itemView.findViewById(R.id.alert_tv);
-
-            okBt.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    removeAudio(getAdapterPosition());
-                }
-            });
-            cancelBt.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    swipeRevealLayout.close(true);
-                }
-            });
-            alertCb.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-                @Override
-                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                    SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(ctxt);
-                    final SharedPreferences.Editor sharedPrefEd = sharedPref.edit();
-                    final String ALERT_NEEDED = "alert needed";
-                    if (isChecked) {//show alert again next time
-                        sharedPrefEd.putBoolean(ALERT_NEEDED, true);
-                    } else { //no longer show alert
-                        sharedPrefEd.putBoolean(ALERT_NEEDED, false);
-                    }
-                    sharedPrefEd.apply();
-                }
-            });
         }
 
     }

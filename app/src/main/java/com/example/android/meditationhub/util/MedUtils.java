@@ -18,7 +18,6 @@ import androidx.core.content.FileProvider;
 
 import com.example.android.meditationhub.R;
 import com.example.android.meditationhub.model.MeditationLocal;
-import com.example.android.meditationhub.ui.PlayerActivity;
 
 import java.io.File;
 import java.util.Locale;
@@ -93,16 +92,6 @@ public class MedUtils {
         } else {
             return BitmapFactory.decodeResource(ctxt.getResources(), R.drawable.ic_meditation_hub);
         }
-    }
-
-    public static int getPlaybackControl() {
-        int image;
-        if (PlayerActivity.isPlaying) {
-            image = android.R.drawable.ic_media_pause;
-        } else {
-            image = android.R.drawable.ic_media_play;
-        }
-        return image;
     }
 
     public static int getDelay(Context ctxt) {

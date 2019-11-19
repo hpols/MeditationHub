@@ -13,7 +13,7 @@
     <string name="background" translatable="true">background</string>
     <string name="remove" translatable="true">Remove\u0020</string>
     <string name="alert_title" translatable="true">Remove %1$s from your device?</string>
-    <string name="alert_cb" translatable="true">Show alert in future</string>
+    <string name="alert_text" translatable="true">The file can be downloaded again at a later time.</string>
     <string name="ok" translatable="true">OK</string>
     <string name="cancel" translatable="true">cancel</string>
     <string name="remove_contDescrip" translatable="true">remove from device</string>
