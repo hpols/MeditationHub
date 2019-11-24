@@ -14,6 +14,7 @@ public class Constants {
     public static final String PLAYER_POSITION = "player position";
     public static final String IS_PLAYING = "is playing";
     public static final String DURATION = "audio_duration";
+    public static final String DELAY_TV = "delay textView";
 
     //start playing when activity is opened?
     public final static int AUTO_PLAY = 1;
@@ -68,4 +69,5 @@ public class Constants {
     public static final String TITLE = "med_title";
     public static final String LOGIN_BOO = "is_login";
     public static final String PLAYER_CHANGE = "play_button_update";
+    public static final String PLAYER_DELAY = "play_delay_ui";
 }

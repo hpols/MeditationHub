@@ -10,6 +10,7 @@ import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.os.IBinder;
 import android.util.Log;
 import android.view.View;
@@ -36,6 +37,7 @@ public class PlayerActivity extends AppCompatActivity {
 
     private MediaPlayerService mediaPlayerService;
     private boolean serviceIsBound;
+    private int delay;
 
     private IntentFilter intentFilter;
 
@@ -62,12 +64,15 @@ public class PlayerActivity extends AppCompatActivity {
                     startMediaPlayerService();
                 }
             }
+
+            delay = MedUtils.getDelay(PlayerActivity.this);
         }
 
         initializeUI(); //setup control buttons
 
         intentFilter = new IntentFilter(); //setup intents for broadcastreceiver
         intentFilter.addAction(Constants.PLAYER_CHANGE);
+        intentFilter.addAction(Constants.PLAYER_DELAY);
     }
 
     private void initializeUI() {
@@ -108,6 +113,22 @@ public class PlayerActivity extends AppCompatActivity {
         });
     }
 
+    private void setupDelayUI(boolean show) {
+        if (show) {
+            playBinding.delayTv.setVisibility(View.VISIBLE);
+            playBinding.playPauseBt.setVisibility(View.INVISIBLE);
+            playBinding.durationTv.setVisibility(View.INVISIBLE);
+            playBinding.positionTv.setVisibility(View.INVISIBLE);
+            playBinding.progressSb.setVisibility(View.INVISIBLE);
+        } else {
+            playBinding.delayTv.setVisibility(View.GONE);
+            playBinding.durationTv.setVisibility(View.VISIBLE);
+            playBinding.positionTv.setVisibility(View.VISIBLE);
+            playBinding.progressSb.setVisibility(View.VISIBLE);
+            playBinding.playPauseBt.setVisibility(View.VISIBLE);
+        }
+    }
+
     private void updatePlayerControls() {
         switch (MediaPlayerService.getState()) {
             case Constants.STATE_PAUSE:
@@ -146,6 +167,22 @@ public class PlayerActivity extends AppCompatActivity {
         public void onReceive(Context context, Intent intent) {
             if (intent.getAction() != null && intent.getAction().equals(Constants.PLAYER_CHANGE)) {
                 updatePlayerControls();
+            }
+            if (intent.getAction() != null && intent.getAction().equals(Constants.PLAYER_DELAY)) {
+                setupDelayUI(true);
+                new CountDownTimer(delay, 1000) {
+
+                    public void onTick(long millisUntilFinished) {
+                        final String delayText = getString((R.string.delay_message),
+                                String.valueOf(millisUntilFinished / 1000));
+                        playBinding.delayTv.setText(delayText);
+                    }
+
+                    public void onFinish() {
+                        setupDelayUI(false);
+                    }
+
+                }.start();
             }
         }
     };

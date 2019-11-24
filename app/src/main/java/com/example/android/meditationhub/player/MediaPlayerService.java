@@ -7,14 +7,18 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.res.AssetFileDescriptor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Binder;
+import android.os.Handler;
 import android.os.IBinder;
 import android.os.PowerManager;
+import android.preference.PreferenceManager;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
@@ -61,14 +65,17 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
     private RemoteViews remoteViews;
 
     PendingIntent notPender, pausePender, resumePender, stopPender;
-    int position;
+    int position, delay;
     long duration;
-    boolean bindIsOngoing;
-    boolean activityIsDestroyed;
+    boolean bindIsOngoing, activityIsDestroyed, playbackIsDelayed;
 
     SeekBar seekBar;
-    TextView currentPositionTv, totalDurationTv;
+    TextView currentPositionTv;
+    TextView totalDurationTv;
     private int interval = 1000;
+
+    public static final boolean TURN_OFF_ALL_ALERTS = true;
+    public static final boolean TURN_ON_ALL_ALERTS = false;
 
     // Async thread to update progress bar every second
     private Runnable progressRunner = new Runnable() {
@@ -81,7 +88,6 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
                 }
                 seekBar.setProgress(mediaPlayer.getCurrentPosition());
                 currentPositionTv.setText(MedUtils.getDisplayTime(mediaPlayer.getCurrentPosition()));
-                Log.v(TAG, "Seeked to: " + (seekBar.getProgress()));
 
                 if (mediaPlayer.isPlaying()) {
                     seekBar.postDelayed(progressRunner, interval);
@@ -99,15 +105,6 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
 
     // Binder given to Activity
     private final IBinder binder = new MyBinder();
-
-    public void skipTo(int userSelectedPosition) {
-        if (getState() == Constants.STATE_PLAY) {
-            mediaPlayer.seekTo(userSelectedPosition);
-        } else {
-            setPosition(userSelectedPosition);
-        }
-
-    }
 
     /**
      * Class used for the client Binder. The Binder object is responsible for returning an instance
@@ -140,6 +137,12 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
         stopPender = createPender(Constants.STOP_ACTION, 0);
 
         remoteViews = new RemoteViews(getPackageName(), R.layout.play_notification);
+
+        delay = MedUtils.getDelay(this);
+        if (delay != 0) {
+            playbackIsDelayed = true;
+        }
+
     }
 
     @Override
@@ -172,6 +175,7 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
                     initMediaSession();
                     initPlayer();
                     play();
+                    handleAlerts(TURN_OFF_ALL_ALERTS);
                 }
                 break;
 
@@ -186,16 +190,26 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
             case Constants.STOP_ACTION:
             default:
                 stopAction();
+                if (delay != 0) {
+                    playbackIsDelayed = true;
+                }
                 break;
         }
         return START_NOT_STICKY;
     }
 
-    private void broadcastPlayerChange() {
+    private void broadcastPlayerChange(String action) {
         Intent broadCastPlayerChange = new Intent();
-        broadCastPlayerChange.setAction(Constants.PLAYER_CHANGE);
+        switch (action){
+            case Constants.PLAYER_CHANGE:
+                broadCastPlayerChange.setAction(Constants.PLAYER_CHANGE);
+                sendBroadcast(broadCastPlayerChange);
+                break;
+            case Constants.PLAYER_DELAY:
+                broadCastPlayerChange.setAction(Constants.PLAYER_DELAY);
+                break;
+        }
         sendBroadcast(broadCastPlayerChange);
-
     }
 
     public void setUIControls(SeekBar progressSb, TextView positionTv, TextView durationTv) {
@@ -267,7 +281,6 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
     }
 
     private void initPlayer() {
-        //TODO: check delayed setting playback etc.
         mediaPlayer = new MediaPlayer();
         mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
         mediaPlayer.setOnErrorListener(this);
@@ -291,9 +304,16 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
                 }
                 mediaPlayer.reset();
                 mediaPlayer.setVolume(1.0f, 1.0f);
-                mediaPlayer.setDataSource(this, medUri);
-                mediaPlayer.prepareAsync();
 
+                if (position == 0 && playbackIsDelayed) { //add delay audio if requested in settings
+
+                    AssetFileDescriptor afd = getAssets().openFd("gong.mp3");
+                    mediaPlayer.setDataSource(afd.getFileDescriptor());
+                    mediaPlayer.prepareAsync();
+                } else {
+                    mediaPlayer.setDataSource(this, medUri);
+                    mediaPlayer.prepareAsync();
+                }
             } catch (Exception e) {
                 destroyPlayer();
                 e.printStackTrace();
@@ -305,16 +325,17 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
         setPosition(mediaPlayer.getCurrentPosition());
         stateService = Constants.STATE_PAUSE;
         notMan.notify(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE, prepareNotification());
-        broadcastPlayerChange();
+        broadcastPlayerChange(Constants.PLAYER_CHANGE);
         seekBar.removeCallbacks(progressRunner);
         Log.i(TAG, "Clicked Pause");
         destroyPlayer();
+        handleAlerts(TURN_ON_ALL_ALERTS);
     }
 
     public void playAction() {
         stateService = Constants.STATE_PLAY;
         notMan.notify(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE, prepareNotification());
-        broadcastPlayerChange();
+        broadcastPlayerChange(Constants.PLAYER_CHANGE);
         Log.i(TAG, "Clicked Play");
         destroyPlayer();
         if (requestAudioFocus()) {
@@ -325,6 +346,7 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
             Toast.makeText(this, "Could not gain audio focus. Please try again.",
                     Toast.LENGTH_SHORT).show();
         }
+        handleAlerts(TURN_OFF_ALL_ALERTS);
     }
 
     public void stopAction() {
@@ -332,10 +354,11 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
         setBindIsOngoing(false);
         stateService = Constants.STATE_NOT_INIT;
         position = 0;
-        broadcastPlayerChange();
+        broadcastPlayerChange(Constants.PLAYER_CHANGE);
         destroyPlayer();
         stopForeground(true);
         stopSelf();
+        handleAlerts(TURN_ON_ALL_ALERTS);
     }
 
     private Notification prepareNotification() {
@@ -424,40 +447,102 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
                 intent, PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
+    public void handleAlerts(boolean activation) {
+
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
+        boolean Dnd = sharedPref.getBoolean(getString(R.string.pref_dnd_switch_key), false);
+
+        if (Dnd) {
+            AudioManager auMan;
+            auMan = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+
+            assert auMan != null;
+            String logText;
+            if (activation == TURN_OFF_ALL_ALERTS) {
+                logText = "turned off";
+                //turn ringer silent
+                auMan.setRingerMode(AudioManager.RINGER_MODE_SILENT);
+            } else {
+                logText = "turned on";
+                auMan.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
+            }
+            Log.i(TAG,"RINGER is " + logText);
+
+            //turn off sound, disable notifications
+            auMan.setStreamMute(AudioManager.STREAM_SYSTEM, activation);
+            Log.i(TAG,"STREAM_SYSTEM" + logText);
+            //notifications
+            auMan.setStreamMute(AudioManager.STREAM_NOTIFICATION, activation);
+            Log.i(TAG,"STREAM_NOTIFICATION" + logText);
+            //alarm
+            auMan.setStreamMute(AudioManager.STREAM_ALARM, activation);
+            Log.i(TAG,"STREAM_ALARM" + logText);
+            //ringer
+            auMan.setStreamMute(AudioManager.STREAM_RING, activation);
+            Log.i(TAG,"STREAM_RING" + logText);
+        }
+    }
+
     @Override
     public void onPrepared(MediaPlayer mp) {
-        setDuration(mediaPlayer.getDuration());
         Log.d(TAG, "Player onPrepared() & duration is: " + duration);
         stateService = Constants.STATE_PLAY;
         notMan.notify(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE, prepareNotification());
+
         try {
             mediaPlayer.setWakeMode(this, PowerManager.PARTIAL_WAKE_LOCK);
         } catch (Exception e) {
             e.printStackTrace();
         }
-        if (position != 0) {
-            mediaPlayer.seekTo(position);
+
+        if (playbackIsDelayed) {
+            mediaPlayer.start();
+            broadcastPlayerChange(Constants.PLAYER_DELAY);
+
+            Handler handler = new Handler();
+            handler.postDelayed(new Runnable() {
+                public void run() {
+                    if (mediaPlayer == null) return;
+                    if (mediaPlayer.isPlaying()) {
+                        mediaPlayer.stop();
+                    }
+                    //reset mediaPlayer
+                    mediaPlayer.reset();
+                    playbackIsDelayed = false; //delay is done
+
+                    initPlayer();
+                    play();
+                }
+            }, delay); //set specified delay
+        } else {
+            if (position != 0) {
+                mediaPlayer.seekTo(position);
+            }
+            mediaPlayer.start();
+            setDuration(mediaPlayer.getDuration());
+
+            broadcastPlayerChange(Constants.PLAYER_CHANGE);
+
+            seekBar.setMax((int) duration);
+            seekBar.postDelayed(progressRunner, interval);
+
+            // Set our duration text view to display total duration in format 0:00
+            totalDurationTv.setText(String.format(Locale.getDefault(), "%d:%02d",
+                    TimeUnit.MILLISECONDS.toMinutes(duration),
+                    TimeUnit.MILLISECONDS.toSeconds(duration) -
+                            TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(duration))
+            ));
         }
-        mediaPlayer.start();
-        broadcastPlayerChange();
-
-        seekBar.setMax((int) duration);
-        seekBar.postDelayed(progressRunner, interval);
-
-        // Set our duration text view to display total duration in format 0:00
-        totalDurationTv.setText(String.format(Locale.getDefault(), "%d:%02d",
-                TimeUnit.MILLISECONDS.toMinutes(duration),
-                TimeUnit.MILLISECONDS.toSeconds(duration) -
-                        TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(duration))
-        ));
     }
 
     @Override
     public void onCompletion(MediaPlayer mediaPlayer) {
         //Invoked when playback of a media source has completed.
-        stopAction();
-        Intent returnToMain = new Intent(this, MainActivity.class);
-        startActivity(returnToMain);
+        if (!playbackIsDelayed) {
+            stopAction();
+            Intent returnToMain = new Intent(this, MainActivity.class);
+            startActivity(returnToMain);
+        }
     }
 
     @Override

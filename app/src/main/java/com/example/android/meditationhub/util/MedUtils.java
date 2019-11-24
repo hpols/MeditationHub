@@ -122,7 +122,7 @@ public class MedUtils {
         String delayString =
                 sharedPref.getString(ctxt.getResources().getString(R.string.pref_key_time_delay),
                         ctxt.getResources().getString(R.string.pref_default_time_delay));
-        return Integer.parseInt(delayString);
+        return Integer.parseInt(delayString) * 1000;
     }
 
     public static Uri getUri(MeditationLocal selectedMed, Context ctxt) {

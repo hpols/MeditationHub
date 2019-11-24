@@ -72,7 +72,6 @@
         <ImageButton
             android:id="@+id/action_ib"
             style="@style/icon"
-            android:background="@drawable/ic_bg"
             android:contentDescription="@string/ContDescrip_download_meditation"
             android:tint="@color/colorAccent"
             app:layout_constraintBottom_toBottomOf="parent"
