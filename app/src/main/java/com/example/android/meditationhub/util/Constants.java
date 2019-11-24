@@ -13,6 +13,7 @@ public class Constants {
     public static final String PLAYER_READY = "player ready";
     public static final String PLAYER_POSITION = "player position";
     public static final String IS_PLAYING = "is playing";
+    public static final String DURATION = "audio_duration";
 
     //start playing when activity is opened?
     public final static int AUTO_PLAY = 1;
@@ -51,6 +52,7 @@ public class Constants {
     public static final long DELAY_UPDATE_NOTIFICATION_FOREGROUND_SERVICE = 10000;
 
     //service states and actions
+    public static final int STATE_STOP = 40;
     public static final int STATE_PREPARE = 30;
     public static final int STATE_PLAY = 20;
     public static final int STATE_PAUSE = 10;

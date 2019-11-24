@@ -30,4 +30,6 @@
 
 
     <string name="text_value_radio_notification" translatable="false">Radio</string>
+    <string name="register">Register</string>
+    <string name="login">Login</string>
 </resources>

@@ -117,6 +117,7 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
                 medVh.thumbIv.setAlpha((float) 0.2);
                 medVh.thumbIv.setImageResource(R.drawable.ic_meditation_hub);
 
+                medVh.durationTv.setVisibility(View.INVISIBLE);
                 medVh.titleTv.setVisibility(View.VISIBLE);
                 medVh.subtitleTv.setVisibility(View.VISIBLE);
                 medVh.titleTv.setText(selectedMed.getTitle());
@@ -134,6 +135,10 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
 
                 medVh.titleTv.setVisibility(View.INVISIBLE);
                 medVh.subtitleTv.setVisibility(View.INVISIBLE);
+                medVh.durationTv.setVisibility(View.VISIBLE);
+
+                medVh.duration = MedUtils.getDuration(medVh.medUri, ctxt);
+                medVh.durationTv.setText(MedUtils.getDisplayTime(medVh.duration));
             }
             medVh.actionIb.setImageResource(actionImage);
 
@@ -146,6 +151,10 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
                                 Toast.LENGTH_SHORT).show();
                     } else {
                         if (selectedMed.getStorage() == null) {
+                            if (!MedUtils.isInternetAvailable(ctxt)) {
+                                Toast.makeText(ctxt, "You are currently offline. Go online to download.",
+                                        Toast.LENGTH_SHORT).show();
+                            }
                             Log.v(TAG, "downloaded started");
                             //download file
                             Permissions.check(ctxt, Manifest.permission.WRITE_EXTERNAL_STORAGE,
@@ -243,13 +252,13 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
 
     class MeditationVH extends RecyclerView.ViewHolder {
 
-        TextView titleTv;
-        TextView subtitleTv;
+        TextView titleTv, subtitleTv, durationTv;
         ImageButton actionIb;
         ImageView thumbIv;
 
         Bitmap coverArt = null;
         Uri medUri;
+        long duration;
 
         MeditationVH(final View view) {
             super(view);
@@ -261,6 +270,7 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
 
             titleTv = itemView.findViewById(R.id.title_tv);
             subtitleTv = itemView.findViewById(R.id.subtitle_tv);
+            durationTv = itemView.findViewById(R.id.duration_tv);
             actionIb = itemView.findViewById(R.id.action_ib);
             thumbIv = itemView.findViewById(R.id.thumb_iv);
 

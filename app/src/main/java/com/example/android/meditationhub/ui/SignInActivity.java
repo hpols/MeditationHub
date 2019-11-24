@@ -140,9 +140,11 @@ public class SignInActivity extends AppCompatActivity {
         if (signInBinding.regLogSwitch.isChecked()) {
             isLogin = true;
             signInBinding.activationEt.setVisibility(View.GONE);
+            signInBinding.regLogSwitch.setText(R.string.login);
         } else {
             isLogin = false;
             signInBinding.activationEt.setVisibility(View.VISIBLE);
+            signInBinding.regLogSwitch.setText(R.string.register);
         }
     }
 

@@ -7,7 +7,8 @@
         android:id="@+id/media_holder"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/colorPrimaryDark">
+        android:background="@color/colorPrimaryDark"
+        android:padding="@dimen/margin_std">
 
         <ImageView
             android:id="@+id/thumb_iv"
@@ -22,7 +23,7 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:srcCompat="@mipmap/ic_launcher_round" />
+            app:srcCompat="@drawable/ic_meditation_hub" />
 
         <TextView
             android:id="@+id/title_tv"
@@ -31,6 +32,8 @@
             app:layout_constraintBottom_toTopOf="@+id/subtitle_tv"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/thumb_iv"
+            app:layout_constraintVertical_chainStyle="packed"
             tools:text="Title of the Meditation" />
 
         <TextView
@@ -38,54 +41,54 @@
             style="@style/text"
             android:textSize="20sp"
             android:textStyle="italic"
-            app:layout_constraintBottom_toTopOf="@+id/progress_sb"
+            app:layout_constraintBottom_toBottomOf="@+id/thumb_iv"
             app:layout_constraintEnd_toEndOf="@+id/title_tv"
             app:layout_constraintStart_toStartOf="@+id/title_tv"
+            app:layout_constraintTop_toBottomOf="@+id/title_tv"
+            app:layout_constraintVertical_chainStyle="packed"
             tools:text="Subtitle of the Meditation" />
 
 
         <ImageButton
             android:id="@+id/play_pause_bt"
-            android:layout_width="wrap_content"
-            android:layout_height="60dp"
-            android:layout_margin="@dimen/margin_std"
-            android:background="@android:color/transparent"
-            android:tint="@color/colorAccent"
+            style="@style/icon"
+            android:contentDescription="@string/play_pause_button_contDescrip"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/stop_bt"
+            app:layout_constraintHorizontal_chainStyle="packed"
             app:layout_constraintStart_toEndOf="@+id/position_tv"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintHorizontal_chainStyle="packed"
-            app:srcCompat="@android:drawable/ic_media_play" />
+            app:srcCompat="@drawable/ic_play" />
 
-        <Button
+        <ImageButton
             android:id="@+id/stop_bt"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
-            android:layout_margin="@dimen/margin_std"
-            android:background="@color/colorAccent"
+            style="@style/icon"
+            android:contentDescription="@string/stop_button_contDescrip"
+            android:visibility="gone"
             app:layout_constraintBottom_toBottomOf="@+id/play_pause_bt"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toEndOf="@+id/play_pause_bt"
-            app:layout_constraintTop_toTopOf="@+id/play_pause_bt" />
+            app:layout_constraintTop_toTopOf="@+id/play_pause_bt"
+            app:srcCompat="@drawable/ic_stop" />
 
         <TextView
             android:id="@+id/position_tv"
             style="@style/text.time"
             android:layout_margin="@dimen/margin_std"
+            android:layout_marginTop="349dp"
+            android:visibility="invisible"
             app:layout_constraintBottom_toBottomOf="@+id/progress_sb"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/subtitle_tv"
-            tools:text="0:00" />
+            app:layout_constraintTop_toTopOf="@+id/progress_sb" />
 
         <TextView
             android:id="@+id/duration_tv"
             style="@style/text.time"
             android:layout_margin="@dimen/margin_std"
+            android:visibility="invisible"
             app:layout_constraintBottom_toBottomOf="@+id/progress_sb"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/progress_sb"
-            tools:text="0:00" />
+            app:layout_constraintTop_toTopOf="@+id/progress_sb" />
 
         <SeekBar
             android:id="@+id/progress_sb"
@@ -94,6 +97,7 @@
             android:layout_height="32dp"
             android:layout_margin="@dimen/margin_std"
             android:layout_weight="1"
+            android:visibility="invisible"
             app:layout_constraintBottom_toTopOf="@+id/play_pause_bt"
             app:layout_constraintEnd_toStartOf="@+id/duration_tv"
             app:layout_constraintStart_toEndOf="@+id/position_tv" />

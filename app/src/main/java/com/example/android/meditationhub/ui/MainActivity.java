@@ -241,7 +241,7 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
 
     @Override
     public void goToPlayer(MeditationLocal selectedMed, Uri medUri, ImageView thumbIv, boolean play) {
-        Intent openPlayer = new Intent(this, PlayActivity.class);
+        Intent openPlayer = new Intent(this, PlayerActivity.class);
         openPlayer.putExtra(Constants.SELECTED_MED, selectedMed);
         openPlayer.putExtra(Constants.URI, medUri);
         openPlayer.putExtra(Constants.IS_PLAYING, play);

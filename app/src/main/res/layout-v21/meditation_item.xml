@@ -17,14 +17,16 @@
         android:id="@+id/item_cl"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@drawable/border">
+        android:background="@drawable/border"
+        android:padding="@dimen/margin_std">
 
         <ImageView
             android:id="@+id/thumb_iv"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_margin="@dimen/margin_std"
+            android:layout_marginBottom="@dimen/margin_std"
             android:adjustViewBounds="true"
+            android:fadingEdge="horizontal|vertical"
             android:contentDescription="@string/thumb_contDescrip"
             android:transitionName="@string/med_image_transition"
             app:layout_constraintEnd_toEndOf="parent"
@@ -45,10 +47,11 @@
             android:shadowRadius="0.6"
             android:textAlignment="center"
             android:textSize="16sp"
+            app:layout_constraintBottom_toTopOf="@+id/subtitle_tv"
             app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_chainStyle="packed"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="@+id/thumb_iv"
-            app:layout_constraintVertical_chainStyle="spread_inside"
             tools:text="Title of the Meditation" />
 
         <TextView
@@ -61,23 +64,32 @@
             android:textStyle="italic"
             app:layout_constraintBottom_toBottomOf="@+id/thumb_iv"
             app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_chainStyle="packed"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/title_tv"
-            app:layout_constraintVertical_chainStyle="spread_inside"
             tools:text="Subtitle of the Meditation" />
 
         <ImageButton
             android:id="@+id/action_ib"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="@android:color/transparent"
+            style="@style/icon"
+            android:background="@drawable/ic_bg"
             android:contentDescription="@string/ContDescrip_download_meditation"
-            android:padding="@dimen/margin_std"
             android:tint="@color/colorAccent"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/duration_tv"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/thumb_iv"
             app:srcCompat="@android:drawable/stat_sys_download" />
+
+        <TextView
+            android:id="@+id/duration_tv"
+            style="@style/text.time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@color/colorPrimaryDark"
+            android:fadingEdge="horizontal|vertical"
+            app:layout_constraintEnd_toEndOf="@+id/thumb_iv"
+            app:layout_constraintTop_toBottomOf="@+id/thumb_iv"
+            tools:text="1:15:00" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.cardview.widget.CardView>

@@ -31,6 +31,15 @@
         <item name="android:minHeight">0dp</item>
     </style>
 
+    <style name="icon">
+        <item name="android:foreground">?attr/selectableItemBackgroundBorderless</item>
+        <item name="android:background">@android:color/transparent</item>
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:padding">@dimen/margin_std</item>
+        <item name="android:layout_marginBottom">@dimen/margin_std</item>
+    </style>
+
     <style name="dialog" parent="Theme.AppCompat.Light.Dialog.Alert">
         <item name="android:background">@color/colorPrimary</item>
         <item name="colorAccent">@color/colorAccent</item>

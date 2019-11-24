@@ -20,7 +20,6 @@ import com.example.android.meditationhub.R;
 import com.example.android.meditationhub.model.MeditationLocal;
 
 import java.io.File;
-import java.util.Locale;
 
 public class MedUtils {
 
@@ -57,23 +56,6 @@ public class MedUtils {
         }
     }
 
-    public static String getDisplayTime(int millis, boolean displayHours, int convert) {
-        StringBuffer buf = new StringBuffer();
-
-        int hours = millis / (1000 * 60 * 60);
-        int minutes = (millis % (1000 * 60 * 60)) / (1000 * 60);
-        int seconds = ((millis % (1000 * 60 * 60)) % (1000 * 60)) / 1000;
-
-        buf
-                .append(String.format(Locale.getDefault(), "%02d", hours))
-                .append(":")
-                .append(String.format(Locale.getDefault(), "%02d", minutes))
-                .append(":")
-                .append(String.format(Locale.getDefault(), "%02d", seconds));
-
-        return buf.toString();
-    }
-
     /**
      * get the cover art of the meditation (as available)
      * see: //https://stackoverflow.com/a/21549403/7601437
@@ -92,6 +74,47 @@ public class MedUtils {
         } else {
             return BitmapFactory.decodeResource(ctxt.getResources(), R.drawable.ic_meditation_hub);
         }
+    }
+
+
+    //https://stackoverflow.com/a/42250183/7601437
+    static public long getDuration (Uri medUri, Context ctxt) {
+        MediaMetadataRetriever mmr = new MediaMetadataRetriever();
+        mmr.setDataSource(ctxt, medUri);
+        String durationStr = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
+        return Long.parseLong(durationStr);
+    }
+
+    /**
+     * Function to convert milliseconds time to
+     * Timer Format
+     * Hours:Minutes:Seconds
+     */
+    public static String getDisplayTime(long milliseconds) {
+        String finalTimerString = "";
+        String secondsString;
+
+        // Convert total duration into time
+        int hours = (int) (milliseconds / (1000 * 60 * 60));
+        int minutes = (int) (milliseconds % (1000 * 60 * 60)) / (1000 * 60);
+        int seconds = (int) ((milliseconds % (1000 * 60 * 60)) % (1000 * 60) / 1000);
+
+        // Add hours if there
+        if (hours > 0) {
+            finalTimerString = hours + ":";
+        }
+
+        // Prepending 0 to seconds if it is one digit
+        if (seconds < 10) {
+            secondsString = "0" + seconds;
+        } else {
+            secondsString = "" + seconds;
+        }
+
+        finalTimerString = finalTimerString + minutes + ":" + secondsString;
+
+        // return timer string
+        return finalTimerString;
     }
 
     public static int getDelay(Context ctxt) {

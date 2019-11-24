@@ -47,6 +47,7 @@
         android:layout_toEndOf="@+id/linearLayout"
         android:layout_toRightOf="@+id/linearLayout"
         android:background="@android:color/transparent"
+        android:contentDescription="@string/play_pause_button_contDescrip"
         android:src="@android:drawable/ic_media_play"
         android:tint="@color/colorAccent" />
 
@@ -72,6 +73,7 @@
         android:layout_marginEnd="@dimen/margin_std"
         android:layout_marginRight="@dimen/margin_std"
         android:background="@android:color/transparent"
+        android:contentDescription="@string/stop_button_contDescrip"
         android:src="@android:drawable/ic_menu_close_clear_cancel"
         android:tint="@color/colorAccent" />
 </RelativeLayout>

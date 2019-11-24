@@ -15,22 +15,33 @@ import android.net.Uri;
 import android.os.Binder;
 import android.os.IBinder;
 import android.os.PowerManager;
+import android.support.v4.media.session.MediaSessionCompat;
+import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
 import android.view.View;
 import android.widget.RemoteViews;
+import android.widget.SeekBar;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
 
 import com.example.android.meditationhub.R;
 import com.example.android.meditationhub.model.MeditationLocal;
-import com.example.android.meditationhub.ui.PlayActivity;
+import com.example.android.meditationhub.ui.MainActivity;
+import com.example.android.meditationhub.ui.PlayerActivity;
 import com.example.android.meditationhub.util.Constants;
+import com.example.android.meditationhub.util.MedUtils;
+
+import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Foreground service based on: https://github.com/DimaKoz/Android-Foreground-Service-Example
  */
 public class MediaPlayerService extends Service implements MediaPlayer.OnErrorListener,
-        MediaPlayer.OnPreparedListener, MediaPlayer.OnBufferingUpdateListener {
+        MediaPlayer.OnPreparedListener, MediaPlayer.OnCompletionListener,
+        AudioManager.OnAudioFocusChangeListener {
 
     private static final String TAG = MediaPlayerService.class.getSimpleName();
 
@@ -43,14 +54,41 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
     private String medTitle;
     private final Object lock = new Object();
     private MediaPlayer mediaPlayer;
+    private AudioManager audioMan;
     private NotificationManager notMan;
+    private MediaSessionCompat mediaSession;
     private PowerManager.WakeLock wakeLock;
     private RemoteViews remoteViews;
 
     PendingIntent notPender, pausePender, resumePender, stopPender;
     int position;
-
+    long duration;
     boolean bindIsOngoing;
+    boolean activityIsDestroyed;
+
+    SeekBar seekBar;
+    TextView currentPositionTv, totalDurationTv;
+    private int interval = 1000;
+
+    // Async thread to update progress bar every second
+    private Runnable progressRunner = new Runnable() {
+        @Override
+        public void run() {
+            if (seekBar != null) {
+                if (activityIsDestroyed) {
+                    seekBar.setMax((int) duration);
+                    totalDurationTv.setText(MedUtils.getDisplayTime(duration));
+                }
+                seekBar.setProgress(mediaPlayer.getCurrentPosition());
+                currentPositionTv.setText(MedUtils.getDisplayTime(mediaPlayer.getCurrentPosition()));
+                Log.v(TAG, "Seeked to: " + (seekBar.getProgress()));
+
+                if (mediaPlayer.isPlaying()) {
+                    seekBar.postDelayed(progressRunner, interval);
+                }
+            }
+        }
+    };
 
     public MediaPlayerService() {
     }
@@ -61,6 +99,15 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
 
     // Binder given to Activity
     private final IBinder binder = new MyBinder();
+
+    public void skipTo(int userSelectedPosition) {
+        if (getState() == Constants.STATE_PLAY) {
+            mediaPlayer.seekTo(userSelectedPosition);
+        } else {
+            setPosition(userSelectedPosition);
+        }
+
+    }
 
     /**
      * Class used for the client Binder. The Binder object is responsible for returning an instance
@@ -116,8 +163,16 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
                 stateService = Constants.STATE_PREPARE;
                 startForeground(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE, prepareNotification());
                 destroyPlayer();
-                initPlayer();
-                play();
+                //Request audio focus
+                if (!requestAudioFocus()) {
+                    //Could not gain focus
+                    stopSelf();
+                    Toast.makeText(this, "Could not gain audio focus. Please try again", Toast.LENGTH_SHORT).show();
+                } else {
+                    initMediaSession();
+                    initPlayer();
+                    play();
+                }
                 break;
 
             case Constants.PAUSE_ACTION:
@@ -129,13 +184,9 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
                 break;
 
             case Constants.STOP_ACTION:
+            default:
                 stopAction();
                 break;
-
-            default:
-                stopForeground(true);
-                broadcastPlayerChange();
-                stopSelf();
         }
         return START_NOT_STICKY;
     }
@@ -147,12 +198,43 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
 
     }
 
+    public void setUIControls(SeekBar progressSb, TextView positionTv, TextView durationTv) {
+        seekBar = progressSb;
+        currentPositionTv = positionTv;
+        totalDurationTv = durationTv;
+        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if (fromUser) {
+                    // Change current position of the song playback
+                    mediaPlayer.seekTo(progress);
+                }
+
+                // Update our textView to display the correct number of second in format 0:00
+                currentPositionTv.setText(String.format(Locale.getDefault(), "%d:%02d",
+                        TimeUnit.MILLISECONDS.toMinutes(progress),
+                        TimeUnit.MILLISECONDS.toSeconds(progress) -
+                                TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(progress))
+                ));
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+            }
+        });
+    }
+
     @Override
     public void onDestroy() {
+        super.onDestroy();
         Log.d(TAG, "onDestroy()");
         destroyPlayer();
         stateService = Constants.STATE_NOT_INIT;
-        super.onDestroy();
+        removeAudioFocus();
     }
 
     private void destroyPlayer() {
@@ -168,6 +250,10 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
             }
         }
         unlockCPU();
+        if (seekBar != null) {
+            seekBar.removeCallbacks(progressRunner);
+        }
+
     }
 
     public boolean onError(MediaPlayer mp, int what, int extra) {
@@ -181,11 +267,12 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
     }
 
     private void initPlayer() {
+        //TODO: check delayed setting playback etc.
         mediaPlayer = new MediaPlayer();
         mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
         mediaPlayer.setOnErrorListener(this);
         mediaPlayer.setOnPreparedListener(this);
-        mediaPlayer.setOnBufferingUpdateListener(this);
+        mediaPlayer.setOnCompletionListener(this);
         mediaPlayer.setOnInfoListener(new MediaPlayer.OnInfoListener() {
             @Override
             public boolean onInfo(MediaPlayer mp, int what, int extra) {
@@ -219,6 +306,7 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
         stateService = Constants.STATE_PAUSE;
         notMan.notify(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE, prepareNotification());
         broadcastPlayerChange();
+        seekBar.removeCallbacks(progressRunner);
         Log.i(TAG, "Clicked Pause");
         destroyPlayer();
     }
@@ -229,8 +317,14 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
         broadcastPlayerChange();
         Log.i(TAG, "Clicked Play");
         destroyPlayer();
-        initPlayer();
-        play();
+        if (requestAudioFocus()) {
+            initPlayer();
+            play();
+        } else { //Could not gain focus
+            stopSelf();
+            Toast.makeText(this, "Could not gain audio focus. Please try again.",
+                    Toast.LENGTH_SHORT).show();
+        }
     }
 
     public void stopAction() {
@@ -314,7 +408,7 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
         Intent intent;
 
         if (action.equals(Constants.MAIN_ACTION)) {
-            intent = new Intent(this, PlayActivity.class);
+            intent = new Intent(this, PlayerActivity.class);
         } else {
             intent = new Intent(this, MediaPlayerService.class);
         }
@@ -332,7 +426,8 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
 
     @Override
     public void onPrepared(MediaPlayer mp) {
-        Log.d(TAG, "Player onPrepared()");
+        setDuration(mediaPlayer.getDuration());
+        Log.d(TAG, "Player onPrepared() & duration is: " + duration);
         stateService = Constants.STATE_PLAY;
         notMan.notify(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE, prepareNotification());
         try {
@@ -345,11 +440,108 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
         }
         mediaPlayer.start();
         broadcastPlayerChange();
+
+        seekBar.setMax((int) duration);
+        seekBar.postDelayed(progressRunner, interval);
+
+        // Set our duration text view to display total duration in format 0:00
+        totalDurationTv.setText(String.format(Locale.getDefault(), "%d:%02d",
+                TimeUnit.MILLISECONDS.toMinutes(duration),
+                TimeUnit.MILLISECONDS.toSeconds(duration) -
+                        TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(duration))
+        ));
     }
 
     @Override
-    public void onBufferingUpdate(MediaPlayer mp, int percent) {
-        Log.d(TAG, "Player onBufferingUpdate():" + percent);
+    public void onCompletion(MediaPlayer mediaPlayer) {
+        //Invoked when playback of a media source has completed.
+        stopAction();
+        Intent returnToMain = new Intent(this, MainActivity.class);
+        startActivity(returnToMain);
+    }
+
+    @Override
+    public void onAudioFocusChange(int i) {
+        //Invoked when the audio focus of the system is updated.
+        switch (i) { //get focus
+            case AudioManager.AUDIOFOCUS_GAIN:
+                // resume playback
+                if (mediaPlayer == null) initPlayer();
+                else if (!mediaPlayer.isPlaying()) mediaPlayer.start();
+                mediaPlayer.setVolume(1.0f, 1.0f);
+                break;
+            case AudioManager.AUDIOFOCUS_LOSS:
+                // Lost focus for an unbounded amount of time: stop playback and release media player
+                if (mediaPlayer.isPlaying()) mediaPlayer.stop();
+                mediaPlayer.release();
+                mediaPlayer = null;
+                break;
+            case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
+                // Lost focus for a short time, but we have to stop
+                // playback. We don't release the media player because playback
+                // is likely to resume
+                if (mediaPlayer.isPlaying()) mediaPlayer.pause();
+                break;
+            case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK:
+                // Lost focus for a short time, but it's ok to keep playing
+                // at an attenuated level
+                if (mediaPlayer.isPlaying()) mediaPlayer.setVolume(0.1f, 0.1f);
+                break;
+        }
+    }
+
+    private boolean requestAudioFocus() {
+        audioMan = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        assert audioMan != null;
+        int result = audioMan.requestAudioFocus(this, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN);
+        //Focus gained
+        return result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
+        //Could not gain focus
+    }
+
+    private boolean removeAudioFocus() {
+        return AudioManager.AUDIOFOCUS_REQUEST_GRANTED ==
+                audioMan.abandonAudioFocus(this);
+    }
+
+    /**
+     * MediaSession and Notification actions
+     */
+    private void initMediaSession() {
+        mediaSession = new MediaSessionCompat(this, MediaPlayerService.class.getSimpleName());
+
+        // Enable mediaButton ~ and transportControls callbacks
+        mediaSession.setFlags(MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS |
+                MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS);
+
+
+        // Set an initial PlaybackState with ACTION_PLAY, so media buttons can start the player.
+        PlaybackStateCompat.Builder stateBuilder = new PlaybackStateCompat.Builder().setActions(
+                PlaybackStateCompat.ACTION_PLAY |
+                        PlaybackStateCompat.ACTION_PAUSE);
+        mediaSession.setPlaybackState(stateBuilder.build());
+
+        // MySessionCallback has methods that handle callbacks from a media controller.
+        mediaSession.setCallback(new MySessionCallback());
+
+        // Start the Media Session since the activity is active.
+        mediaSession.setActive(true);
+    }
+
+    /**
+     * Media Session Callbacks, enabling all external clients to control the player.
+     */
+    class MySessionCallback extends MediaSessionCompat.Callback {
+        @Override
+        public void onPlay() {
+            stateService = Constants.STATE_PLAY;
+        }
+
+        @Override
+        public void onPause() {
+            stateService = Constants.STATE_PAUSE;
+            setPosition(mediaPlayer.getCurrentPosition());
+        }
     }
 
     private void lockCPU() {
@@ -418,5 +610,19 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
         this.bindIsOngoing = bindIsOngoing;
     }
 
+    public long getDuration() {
+        return duration;
+    }
 
+    public void setDuration(long duration) {
+        this.duration = duration;
+    }
+
+    public boolean isActivityIsDestroyed() {
+        return activityIsDestroyed;
+    }
+
+    public void setActivityIsDestroyed(boolean activityIsDestroyed) {
+        this.activityIsDestroyed = activityIsDestroyed;
+    }
 }
