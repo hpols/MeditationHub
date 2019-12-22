@@ -11,10 +11,12 @@ import android.content.SharedPreferences;
 import android.content.res.AssetFileDescriptor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.media.AudioAttributes;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Binder;
+import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.PowerManager;
@@ -37,7 +39,6 @@ import com.example.android.meditationhub.ui.PlayerActivity;
 import com.example.android.meditationhub.util.Constants;
 import com.example.android.meditationhub.util.MedUtils;
 
-import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -60,34 +61,33 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
     private MediaPlayer mediaPlayer;
     private AudioManager audioMan;
     private NotificationManager notMan;
-    private MediaSessionCompat mediaSession;
     private PowerManager.WakeLock wakeLock;
     private RemoteViews remoteViews;
 
-    PendingIntent notPender, pausePender, resumePender, stopPender;
-    int position, delay;
-    long duration;
-    boolean bindIsOngoing, activityIsDestroyed, playbackIsDelayed;
+    private PendingIntent notPender, pausePender, resumePender, stopPender;
+    private int position, delay;
+    private long duration;
+    private boolean bindIsOngoing, activityIsDestroyed, playbackIsDelayed;
 
-    SeekBar seekBar;
-    TextView currentPositionTv;
-    TextView totalDurationTv;
-    private int interval = 1000;
+    private SeekBar seekBar;
+    private TextView currentPositionTv, totalDurationTv;
+    private final int interval = 1000;
+    private boolean isLongerThanHour;
 
-    public static final boolean TURN_OFF_ALL_ALERTS = true;
-    public static final boolean TURN_ON_ALL_ALERTS = false;
+    private static final boolean TURN_OFF_ALL_ALERTS = true;
+    private static final boolean TURN_ON_ALL_ALERTS = false;
 
     // Async thread to update progress bar every second
-    private Runnable progressRunner = new Runnable() {
+    private final Runnable progressRunner = new Runnable() {
         @Override
         public void run() {
             if (seekBar != null) {
                 if (activityIsDestroyed) {
                     seekBar.setMax((int) duration);
-                    totalDurationTv.setText(MedUtils.getDisplayTime(duration));
+                    totalDurationTv.setText(MedUtils.getDisplayTime(duration, false));
                 }
                 seekBar.setProgress(mediaPlayer.getCurrentPosition());
-                currentPositionTv.setText(MedUtils.getDisplayTime(mediaPlayer.getCurrentPosition()));
+                currentPositionTv.setText(MedUtils.getDisplayTime(mediaPlayer.getCurrentPosition(), isLongerThanHour));
 
                 if (mediaPlayer.isPlaying()) {
                     seekBar.postDelayed(progressRunner, interval);
@@ -142,7 +142,6 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
         if (delay != 0) {
             playbackIsDelayed = true;
         }
-
     }
 
     @Override
@@ -170,7 +169,8 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
                 if (!requestAudioFocus()) {
                     //Could not gain focus
                     stopSelf();
-                    Toast.makeText(this, "Could not gain audio focus. Please try again", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Could not gain audio focus. Please try again",
+                            Toast.LENGTH_SHORT).show();
                 } else {
                     initMediaSession();
                     initPlayer();
@@ -200,7 +200,7 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
 
     private void broadcastPlayerChange(String action) {
         Intent broadCastPlayerChange = new Intent();
-        switch (action){
+        switch (action) {
             case Constants.PLAYER_CHANGE:
                 broadCastPlayerChange.setAction(Constants.PLAYER_CHANGE);
                 sendBroadcast(broadCastPlayerChange);
@@ -225,11 +225,8 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
                 }
 
                 // Update our textView to display the correct number of second in format 0:00
-                currentPositionTv.setText(String.format(Locale.getDefault(), "%d:%02d",
-                        TimeUnit.MILLISECONDS.toMinutes(progress),
-                        TimeUnit.MILLISECONDS.toSeconds(progress) -
-                                TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(progress))
-                ));
+                currentPositionTv.setText(MedUtils.getDisplayTime(mediaPlayer.getCurrentPosition(), isLongerThanHour));
+
             }
 
             @Override
@@ -241,6 +238,13 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
             }
         });
     }
+
+    private void resetUI() {
+        seekBar.setProgress(0);
+        currentPositionTv.setText(MedUtils.getDisplayTime(0, isLongerThanHour));
+        //broadcastPlayerChange(Constants.PLAYER_RESET);
+    }
+
 
     @Override
     public void onDestroy() {
@@ -274,7 +278,6 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
 
         Log.d(TAG, "Player onError() what:" + what);
         destroyPlayer();
-        //handler.postDelayed(delayedShutdown, Constants.DELAY_SHUTDOWN_FOREGROUND_SERVICE);
         notMan.notify(Constants.NOTIFICATION_ID_FOREGROUND_SERVICE, prepareNotification());
         stateService = Constants.STATE_PAUSE;
         return false;
@@ -282,6 +285,14 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
 
     private void initPlayer() {
         mediaPlayer = new MediaPlayer();
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            AudioAttributes.Builder builder = new AudioAttributes.Builder();
+            builder.setUsage(AudioAttributes.USAGE_MEDIA);
+            builder.setContentType(AudioAttributes.CONTENT_TYPE_MUSIC);
+            AudioAttributes attributes = builder.build();
+            mediaPlayer.setAudioAttributes(attributes);
+        }
         mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
         mediaPlayer.setOnErrorListener(this);
         mediaPlayer.setOnPreparedListener(this);
@@ -307,8 +318,12 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
 
                 if (position == 0 && playbackIsDelayed) { //add delay audio if requested in settings
 
-                    AssetFileDescriptor afd = getAssets().openFd("gong.mp3");
-                    mediaPlayer.setDataSource(afd.getFileDescriptor());
+                    AssetFileDescriptor afd = getResources().openRawResourceFd(R.raw.gong);
+                    if (afd == null) return;
+                    mediaPlayer.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(),
+                            afd.getLength());
+                    afd.close();
+
                     mediaPlayer.prepareAsync();
                 } else {
                     mediaPlayer.setDataSource(this, medUri);
@@ -351,6 +366,7 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
 
     public void stopAction() {
         Log.i(TAG, "Received Stop Intent");
+        resetUI();
         setBindIsOngoing(false);
         stateService = Constants.STATE_NOT_INIT;
         position = 0;
@@ -447,7 +463,7 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
                 intent, PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
-    public void handleAlerts(boolean activation) {
+    private void handleAlerts(boolean activation) {
 
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
         boolean Dnd = sharedPref.getBoolean(getString(R.string.pref_dnd_switch_key), false);
@@ -466,20 +482,20 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
                 logText = "turned on";
                 auMan.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
             }
-            Log.i(TAG,"RINGER is " + logText);
+            Log.i(TAG, "RINGER is " + logText);
 
             //turn off sound, disable notifications
             auMan.setStreamMute(AudioManager.STREAM_SYSTEM, activation);
-            Log.i(TAG,"STREAM_SYSTEM" + logText);
+            Log.i(TAG, "STREAM_SYSTEM" + logText);
             //notifications
             auMan.setStreamMute(AudioManager.STREAM_NOTIFICATION, activation);
-            Log.i(TAG,"STREAM_NOTIFICATION" + logText);
+            Log.i(TAG, "STREAM_NOTIFICATION" + logText);
             //alarm
             auMan.setStreamMute(AudioManager.STREAM_ALARM, activation);
-            Log.i(TAG,"STREAM_ALARM" + logText);
+            Log.i(TAG, "STREAM_ALARM" + logText);
             //ringer
             auMan.setStreamMute(AudioManager.STREAM_RING, activation);
-            Log.i(TAG,"STREAM_RING" + logText);
+            Log.i(TAG, "STREAM_RING" + logText);
         }
     }
 
@@ -527,11 +543,7 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
             seekBar.postDelayed(progressRunner, interval);
 
             // Set our duration text view to display total duration in format 0:00
-            totalDurationTv.setText(String.format(Locale.getDefault(), "%d:%02d",
-                    TimeUnit.MILLISECONDS.toMinutes(duration),
-                    TimeUnit.MILLISECONDS.toSeconds(duration) -
-                            TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(duration))
-            ));
+            totalDurationTv.setText(MedUtils.getDisplayTime(duration, false));
         }
     }
 
@@ -578,22 +590,23 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
     private boolean requestAudioFocus() {
         audioMan = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         assert audioMan != null;
-        int result = audioMan.requestAudioFocus(this, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN);
+        int result = audioMan.requestAudioFocus(this, AudioManager.STREAM_MUSIC,
+                AudioManager.AUDIOFOCUS_GAIN);
         //Focus gained
         return result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
         //Could not gain focus
     }
 
-    private boolean removeAudioFocus() {
-        return AudioManager.AUDIOFOCUS_REQUEST_GRANTED ==
-                audioMan.abandonAudioFocus(this);
+    private void removeAudioFocus() {
+        audioMan.abandonAudioFocus(this);
     }
 
     /**
      * MediaSession and Notification actions
      */
     private void initMediaSession() {
-        mediaSession = new MediaSessionCompat(this, MediaPlayerService.class.getSimpleName());
+        MediaSessionCompat mediaSession = new MediaSessionCompat(this,
+                MediaPlayerService.class.getSimpleName());
 
         // Enable mediaButton ~ and transportControls callbacks
         mediaSession.setFlags(MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS |
@@ -634,7 +647,8 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
         if (powMan == null) {
             return;
         }
-        wakeLock = powMan.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, this.getClass().getSimpleName());
+        wakeLock = powMan.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
+                this.getClass().getSimpleName());
         wakeLock.acquire(1000);
         Log.d(TAG, "Player lockCPU()");
     }
@@ -647,11 +661,7 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
         }
     }
 
-    public int getPosition() {
-        return position;
-    }
-
-    public void setPosition(int position) {
+    private void setPosition(int position) {
         this.position = position;
     }
 
@@ -663,28 +673,12 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
         return coverArt;
     }
 
-    public Uri getMedUri() {
-        return medUri;
-    }
-
-    public String getMedTitle() {
-        return medTitle;
-    }
-
     public void setSelectedMed(MeditationLocal selectedMed) {
         this.selectedMed = selectedMed;
     }
 
     public void setCoverArt(Bitmap coverArt) {
         this.coverArt = coverArt;
-    }
-
-    public void setMedUri(Uri medUri) {
-        this.medUri = medUri;
-    }
-
-    public void setMedTitle(String medTitle) {
-        this.medTitle = medTitle;
     }
 
     public boolean isBindIsOngoing() {
@@ -695,16 +689,9 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
         this.bindIsOngoing = bindIsOngoing;
     }
 
-    public long getDuration() {
-        return duration;
-    }
-
-    public void setDuration(long duration) {
+    private void setDuration(long duration) {
         this.duration = duration;
-    }
-
-    public boolean isActivityIsDestroyed() {
-        return activityIsDestroyed;
+        isLongerThanHour = duration > TimeUnit.HOURS.toMillis(1);
     }
 
     public void setActivityIsDestroyed(boolean activityIsDestroyed) {

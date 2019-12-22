@@ -3,10 +3,15 @@ package com.example.android.meditationhub.ui;
 import android.app.ActivityOptions;
 import android.app.AlertDialog;
 import android.app.DownloadManager;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.database.Cursor;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -21,6 +26,7 @@ import android.view.View;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -75,7 +81,7 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
 
     SharedPreferences sharedPref;
     SharedPreferences.Editor sharedPrefEd;
-    final static public String ALERT_NEEDED = "alert needed";
+    private IntentFilter intentFilter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -86,37 +92,16 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
         sharedPrefEd = sharedPref.edit();
         sharedPrefEd.apply();
 
+        intentFilter = new IntentFilter(); //setup intents for broadcastreceiver
+        intentFilter.addAction(ConnectivityManager.EXTRA_NO_CONNECTIVITY);
+
         fireDb = FirebaseDatabase.getInstance();
         dbRefMed = fireDb.getReference("meditations");
-
         meditationLocalDb = MeditationLocalDb.getInstance(this);
-
         fireAuth = FirebaseAuth.getInstance();
 
-        dbRefMed.addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-
-                mainBinding.meditationListPb.setVisibility(View.VISIBLE);
-                for (DataSnapshot keyNodes : dataSnapshot.getChildren()) {
-                    keys.add(keyNodes.getKey());
-                    MeditationFireBase meditation = keyNodes.getValue(MeditationFireBase.class);
-                    assert meditation != null;
-                    addToLocalDb(meditation, keyNodes.getKey());
-                    Log.v(getClass().getSimpleName(), "meditation added");
-                }
-                fireAuth = FirebaseAuth.getInstance();
-
-                mainBinding.meditationListPb.setVisibility(View.GONE);
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError databaseError) {
-
-            }
-        });
-
-        final boolean showAlert = sharedPref.getBoolean(ALERT_NEEDED, true);
+        medAdapter = new MeditationAdapter(MainActivity.this, fireAuth, items,
+                MainActivity.this);
 
         //setup viewModel
         MeditationLocalViewModel viewModel
@@ -126,9 +111,6 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
             public void onChanged(@Nullable List<MeditationLocal> meditationLocals) {
                 Log.d(TAG, "Updating entries from LiveData in ViewModel");
                 createOrderedItemList(meditationLocals);
-
-                medAdapter = new MeditationAdapter(MainActivity.this, fireAuth, items,
-                        MainActivity.this);
 
                 final int numOfCol = MedUtils.noOfCols(MainActivity.this);
 
@@ -150,6 +132,70 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
                 mainBinding.meditationRv.setLayoutManager(layoutMan);
                 mainBinding.meditationRv.setHasFixedSize(true);
                 mainBinding.meditationRv.setAdapter(medAdapter);
+            }
+        });
+
+        if (medAdapter.getItemCount() == 0) {
+            Toast.makeText(this, "Go online to view & retrieve the available Meditations.",
+                    Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        registerReceiver(networkReceiver, intentFilter);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        unregisterReceiver(networkReceiver);
+    }
+
+    /**
+     * stay up to date with playback controls in the UI
+     */
+    private final BroadcastReceiver networkReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent != null && intent.getAction().equals(ConnectivityManager.CONNECTIVITY_ACTION)) {
+                ConnectivityManager cm =
+                        (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+                assert cm != null;
+                NetworkInfo networkInfo = cm.getActiveNetworkInfo();
+                boolean isConnected = networkInfo != null && networkInfo.isConnectedOrConnecting();
+                if (isConnected) {
+                    Log.d(TAG, "We have internet connection. Good to go.");
+                    checkFirebaseForUpdates();
+                }
+            }
+        }
+    };
+
+    private void checkFirebaseForUpdates() {
+        dbRefMed.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+
+                mainBinding.meditationListPb.setVisibility(View.VISIBLE);
+                for (DataSnapshot keyNodes : dataSnapshot.getChildren()) {
+                    keys.add(keyNodes.getKey());
+                    MeditationFireBase meditation = keyNodes.getValue(MeditationFireBase.class);
+                    assert meditation != null;
+                    addToLocalDb(meditation, keyNodes.getKey());
+                    Log.v(getClass().getSimpleName(), "meditation added");
+                }
+                mainBinding.meditationListPb.setVisibility(View.GONE);
+
+                if (medAdapter != null) {
+                    medAdapter.notifyDataSetChanged();
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+
             }
         });
     }
@@ -187,6 +233,20 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
                     receivedMeditation.setStorage(null);
 
                     meditationLocalDb.meditationLocalDao().createEntry(receivedMeditation);
+                } else { //check for differences and update as necessary
+                    if (!meditations.getTitle().equals(storedMeditation.getTitle())) {
+                        storedMeditation.setTitle(meditations.getTitle());
+                    }
+                    if (!meditations.getSubtitle().equals(storedMeditation.getStorage())) {
+                        storedMeditation.setSubtitle(meditations.getSubtitle());
+                    }
+                    if (!meditations.getFilename().equals(storedMeditation.getFilename())) {
+                        storedMeditation.setFilename(meditations.getFilename());
+                    }
+                    if (!meditations.getCategory().equals(storedMeditation.getCategory())) {
+                        storedMeditation.setCategory(meditations.getCategory());
+                    }
+                    //don't touch Id or Storage
                 }
             }
         });
@@ -273,21 +333,19 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
 
         // Get custom view from external layout xml file.
         // see https://www.dev2qa.com/android-snackbar-example/
-        View customView = getLayoutInflater().inflate(R.layout.download_prog, null);
+        View customView = getLayoutInflater().inflate(R.layout.download_prog, mainBinding.mainCl);
         TextView snackMes = customView.findViewById(R.id.snackbar_text);
-        snackMes.setText("Downloading: " + selectedMed.getTitle());
+        String snackText = R.string.download_snack + selectedMed.getTitle();
+        snackMes.setText(snackText);
         final ProgressBar snackProg = customView.findViewById(R.id.circularProgressbar);
         snackProg.setMax(0);
         snackProg.setMax(100);
-
         snackbarView.addView(customView, 0);
-
         bar.show();
 
         //set up the download manager and the file destination
         final DownloadManager dlManager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
         String destination = Environment.getExternalStorageDirectory() + "/MeditationHub";
-        Log.v(TAG, "destination: " + destination);
 
         //ensure the folder exists before continuing
         File file = new File(destination);
@@ -300,6 +358,7 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
         //create the download request
         DownloadManager.Request dlRequest = new DownloadManager.Request(uri);
         dlRequest.setDestinationUri(destinationUri);
+        assert dlManager != null;
         final long dlId = dlManager.enqueue(dlRequest);
 
         final String finalDestination = destination;
@@ -350,8 +409,6 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
                                     @Override
                                     public void run() {
                                         snackProg.setProgress(dlProgress);
-                                        Log.v(TAG, "Progress: downloaded: " + bytesLoaded +
-                                                " from total: " + bytesTotal + "=" + dlProgress);
                                     }
                                 });
                             }
@@ -407,8 +464,8 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
                 .setTitle(removeText)
                 .setMessage(R.string.alert_text)
                 .setCancelable(false)
-                .setPositiveButton("Yes",new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog,int id) {
+                .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
                         // if this button is clicked proceed with removing file
                         Uri uriToBeRemoved = Uri.parse(selectedMed.getStorage());
                         int i = getContentResolver().delete(uriToBeRemoved, null, null);
@@ -427,12 +484,11 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
                                     medAdapter.notifyItemChanged(medPos);
                                 }
                             });
-
                         }
                     }
                 })
-                .setNegativeButton("No",new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog,int id) {
+                .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
                         dialog.cancel();
                     }
                 });
@@ -441,5 +497,4 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
         alertDialog.show();
 
     }
-
 }

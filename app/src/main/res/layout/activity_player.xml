@@ -27,8 +27,7 @@
 
         <TextView
             android:id="@+id/title_tv"
-            style="@style/text"
-            android:textSize="24sp"
+            style="@style/text.title"
             app:layout_constraintBottom_toTopOf="@+id/subtitle_tv"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"

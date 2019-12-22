@@ -33,4 +33,6 @@
     <string name="register">Register</string>
     <string name="login">Login</string>
     <string name="delay_message">Your meditation will begin in %1$s seconds.</string>
+    <string name="download_snack">Downloading:</string>
+    <string name="no_internet">No Internet</string>
 </resources>

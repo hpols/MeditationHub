@@ -17,7 +17,15 @@
 
     <style name="text.time">
         <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="text.title">
         <item name="android:textStyle">bold</item>
+        <item name="android:shadowColor">@android:color/background_light</item>
+        <item name="android:shadowDx">1</item>
+        <item name="android:shadowDy">1</item>
+        <item name="android:shadowRadius">0.6</item>
+        <item name="android:textSize">24sp</item>
     </style>
 
     <style name="button">

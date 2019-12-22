@@ -12,7 +12,9 @@ import android.net.Uri;
 import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.util.Log;
+import android.view.View;
 import android.widget.ImageView;
+import android.widget.TextView;
 
 import androidx.core.content.FileProvider;
 
@@ -48,11 +50,21 @@ public class MedUtils {
                 activeNetwork.isConnectedOrConnecting();
     }
 
-    public static void displayCoverArt(Bitmap coverArt, ImageView imageView) {
+    public static void displayMedInfo(Bitmap coverArt, ImageView image, TextView title,
+                                      TextView subtitle, MeditationLocal selectedMed) {
+
         if (coverArt != null) {
-            imageView.setImageBitmap(coverArt);
+            image.setImageBitmap(coverArt);
+            image.setAlpha((float) 1.0);
+            title.setVisibility(View.GONE);
+            subtitle.setVisibility(View.GONE);
         } else {
-            imageView.setImageResource(R.mipmap.ic_launcher);
+            image.setAlpha((float) 0.2);
+            image.setImageResource(R.mipmap.ic_launcher);
+            title.setVisibility(View.VISIBLE);
+            subtitle.setVisibility(View.VISIBLE);
+            title.setText(selectedMed.getTitle());
+            subtitle.setText(selectedMed.getSubtitle());
         }
     }
 
@@ -78,7 +90,7 @@ public class MedUtils {
 
 
     //https://stackoverflow.com/a/42250183/7601437
-    static public long getDuration (Uri medUri, Context ctxt) {
+    static public long getDuration(Uri medUri, Context ctxt) {
         MediaMetadataRetriever mmr = new MediaMetadataRetriever();
         mmr.setDataSource(ctxt, medUri);
         String durationStr = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
@@ -90,9 +102,9 @@ public class MedUtils {
      * Timer Format
      * Hours:Minutes:Seconds
      */
-    public static String getDisplayTime(long milliseconds) {
+    public static String getDisplayTime(long milliseconds, boolean isLongerThanHour) {
         String finalTimerString = "";
-        String secondsString;
+        String secondsString, minuteString;
 
         // Convert total duration into time
         int hours = (int) (milliseconds / (1000 * 60 * 60));
@@ -100,21 +112,28 @@ public class MedUtils {
         int seconds = (int) ((milliseconds % (1000 * 60 * 60)) % (1000 * 60) / 1000);
 
         // Add hours if there
-        if (hours > 0) {
+        if (hours > 0 || isLongerThanHour) {
             finalTimerString = hours + ":";
         }
 
         // Prepending 0 to seconds if it is one digit
-        if (seconds < 10) {
-            secondsString = "0" + seconds;
-        } else {
-            secondsString = "" + seconds;
-        }
+        secondsString = setDoubleDigit(seconds);
+        minuteString = setDoubleDigit(minutes);
 
-        finalTimerString = finalTimerString + minutes + ":" + secondsString;
+        finalTimerString = finalTimerString + minuteString + ":" + secondsString;
 
         // return timer string
         return finalTimerString;
+    }
+
+    private static String setDoubleDigit(int time) {
+        String timeString;
+        if (time < 10) {
+            timeString = "0" + time;
+        } else {
+            timeString = "" + time;
+        }
+        return timeString;
     }
 
     public static int getDelay(Context ctxt) {
@@ -133,7 +152,7 @@ public class MedUtils {
                 ctxt.getApplicationContext().getPackageName() + ".file_provider", medFile);
         ctxt.grantUriPermission(ctxt.getApplicationContext().getPackageName(), medUri,
                 Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        Log.v(TAG,"accessing content via uri: " + medUri);
+        Log.v(TAG, "accessing content via uri: " + medUri);
         return Uri.parse(selectedMed.getStorage());
     }
 }

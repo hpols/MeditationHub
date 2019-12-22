@@ -108,7 +108,8 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
 
             Log.d(TAG, "this meditation = " + selectedMed.toString());
 
-            final String removeText = ctxt.getString((R.string.alert_title), selectedMed.getTitle());
+            final String removeText = ctxt.getString((R.string.alert_title),
+                    selectedMed.getTitle());
             //medVh.alertTv.setText(removeText);
 
             //set Action image and its responses to clicks
@@ -123,22 +124,17 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
                 medVh.titleTv.setText(selectedMed.getTitle());
                 medVh.subtitleTv.setText(selectedMed.getSubtitle());
 
-                //viewBinderHelper.lockSwipe(String.valueOf(medPos));
             } else {
                 actionImage = android.R.drawable.ic_media_play;
                 medVh.thumbIv.setAlpha((float) 1.0);
                 medVh.medUri = MedUtils.getUri(selectedMed, ctxt);
-                //viewBinderHelper.unlockSwipe(String.valueOf(medPos));
 
                 medVh.coverArt = MedUtils.getCoverArt(medVh.medUri, ctxt);
-                MedUtils.displayCoverArt(medVh.coverArt, medVh.thumbIv);
-
-                medVh.titleTv.setVisibility(View.INVISIBLE);
-                medVh.subtitleTv.setVisibility(View.INVISIBLE);
-                medVh.durationTv.setVisibility(View.VISIBLE);
+                MedUtils.displayMedInfo(medVh.coverArt, medVh.thumbIv, medVh.titleTv,
+                        medVh.subtitleTv, selectedMed);
 
                 medVh.duration = MedUtils.getDuration(medVh.medUri, ctxt);
-                medVh.durationTv.setText(MedUtils.getDisplayTime(medVh.duration));
+                medVh.durationTv.setText(MedUtils.getDisplayTime(medVh.duration, false));
             }
             medVh.actionIb.setImageResource(actionImage);
 

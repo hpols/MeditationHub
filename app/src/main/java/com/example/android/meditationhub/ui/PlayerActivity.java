@@ -66,9 +66,9 @@ public class PlayerActivity extends AppCompatActivity {
             }
 
             delay = MedUtils.getDelay(PlayerActivity.this);
-        }
 
-        initializeUI(); //setup control buttons
+            initializeUI(); //setup control buttons
+        }
 
         intentFilter = new IntentFilter(); //setup intents for broadcastreceiver
         intentFilter.addAction(Constants.PLAYER_CHANGE);
@@ -77,16 +77,8 @@ public class PlayerActivity extends AppCompatActivity {
 
     private void initializeUI() {
         //setup the coverArt and titles
-        MedUtils.displayCoverArt(coverArt, playBinding.thumbIv);
-        if (coverArt != null) {
-            playBinding.titleTv.setVisibility(View.INVISIBLE);
-            playBinding.subtitleTv.setVisibility(View.INVISIBLE);
-        } else {
-            playBinding.titleTv.setVisibility(View.VISIBLE);
-            playBinding.subtitleTv.setVisibility(View.VISIBLE);
-            playBinding.titleTv.setText(selectedMed.getTitle());
-            playBinding.subtitleTv.setText(selectedMed.getSubtitle());
-        }
+        MedUtils.displayMedInfo(coverArt, playBinding.thumbIv, playBinding.titleTv,
+                playBinding.subtitleTv, selectedMed);
 
         playBinding.playPauseBt.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -162,7 +154,7 @@ public class PlayerActivity extends AppCompatActivity {
     }
 
     //stay up to date with playback controls in the UI
-    private BroadcastReceiver updatePlayBtReceiver = new BroadcastReceiver() {
+    private final BroadcastReceiver updatePlayBtReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (intent.getAction() != null && intent.getAction().equals(Constants.PLAYER_CHANGE)) {
@@ -184,11 +176,15 @@ public class PlayerActivity extends AppCompatActivity {
 
                 }.start();
             }
+            if (intent.getAction() != null && intent.getAction().equals(Constants.PLAYER_RESET)) {
+                playBinding.positionTv.setText(MedUtils.getDisplayTime(0, false));
+                playBinding.progressSb.setProgress(0);
+            }
         }
     };
 
     //monitor state of the service
-    private ServiceConnection mediaPlayerConnection = new ServiceConnection() {
+    private final ServiceConnection mediaPlayerConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             mediaPlayerService = ((MediaPlayerService.MyBinder) service).getService();
@@ -286,8 +282,4 @@ public class PlayerActivity extends AppCompatActivity {
         }
     }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-    }
 }
