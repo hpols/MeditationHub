@@ -176,10 +176,6 @@ public class PlayerActivity extends AppCompatActivity {
 
                 }.start();
             }
-            if (intent.getAction() != null && intent.getAction().equals(Constants.PLAYER_RESET)) {
-                playBinding.positionTv.setText(MedUtils.getDisplayTime(0, false));
-                playBinding.progressSb.setProgress(0);
-            }
         }
     };
 

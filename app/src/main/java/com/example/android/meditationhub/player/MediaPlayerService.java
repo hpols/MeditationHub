@@ -242,7 +242,6 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
     private void resetUI() {
         seekBar.setProgress(0);
         currentPositionTv.setText(MedUtils.getDisplayTime(0, isLongerThanHour));
-        //broadcastPlayerChange(Constants.PLAYER_RESET);
     }
 
 

@@ -333,9 +333,9 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
 
         // Get custom view from external layout xml file.
         // see https://www.dev2qa.com/android-snackbar-example/
-        View customView = getLayoutInflater().inflate(R.layout.download_prog, mainBinding.mainCl);
+        View customView = getLayoutInflater().inflate(R.layout.download_prog, null);
         TextView snackMes = customView.findViewById(R.id.snackbar_text);
-        String snackText = R.string.download_snack + selectedMed.getTitle();
+        String snackText = getString(R.string.download_snack) + selectedMed.getTitle();
         snackMes.setText(snackText);
         final ProgressBar snackProg = customView.findViewById(R.id.circularProgressbar);
         snackProg.setMax(0);

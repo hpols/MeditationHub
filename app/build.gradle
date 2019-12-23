@@ -42,11 +42,11 @@ dependencies {
     implementation 'com.google.firebase:firebase-storage:19.1.0'
 
     //room, liveData & viewModel dependencies
-    implementation 'androidx.room:room-runtime:2.2.2'
+    implementation 'androidx.room:room-runtime:2.2.3'
     implementation 'androidx.lifecycle:lifecycle-extensions:2.1.0'
     annotationProcessor 'androidx.lifecycle:lifecycle-compiler:2.1.0'
-    annotationProcessor 'androidx.room:room-compiler:2.2.2'
-    testImplementation 'androidx.room:room-testing:2.2.2'
+    annotationProcessor 'androidx.room:room-compiler:2.2.3'
+    testImplementation 'androidx.room:room-testing:2.2.3'
 
     implementation 'com.nabinbhandari.android:permissions:3.8'//Android Permissions
 }
