@@ -36,6 +36,7 @@ import androidx.databinding.DataBindingUtil;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.example.android.meditationhub.BuildConfig;
 import com.example.android.meditationhub.MeditationAdapter;
@@ -88,11 +89,18 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
         super.onCreate(savedInstanceState);
         mainBinding = DataBindingUtil.setContentView(this, R.layout.activity_main);
 
+        mainBinding.swipeRefresher.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                checkFirebaseForUpdates();
+            }
+        });
+
         sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
         sharedPrefEd = sharedPref.edit();
         sharedPrefEd.apply();
 
-        intentFilter = new IntentFilter(); //setup intents for broadcastreceiver
+        intentFilter = new IntentFilter(); //setup intents for broadcastReceiver
         intentFilter.addAction(ConnectivityManager.EXTRA_NO_CONNECTIVITY);
 
         fireDb = FirebaseDatabase.getInstance();
@@ -153,9 +161,7 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
         unregisterReceiver(networkReceiver);
     }
 
-    /**
-     * stay up to date with playback controls in the UI
-     */
+    //stay up to date with playback controls in the UI
     private final BroadcastReceiver networkReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -174,6 +180,7 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
     };
 
     private void checkFirebaseForUpdates() {
+        mainBinding.swipeRefresher.setRefreshing(true);
         dbRefMed.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
@@ -191,17 +198,18 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
                 if (medAdapter != null) {
                     medAdapter.notifyDataSetChanged();
                 }
+                mainBinding.swipeRefresher.setRefreshing(false);
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError databaseError) {
-
+                mainBinding.swipeRefresher.setRefreshing(false);
             }
         });
+
     }
 
     private void createOrderedItemList(List<MeditationLocal> meditationLocals) {
-
         Collections.sort(meditationLocals);
         String prevCategory = null;
         for (int i = 0; i < meditationLocals.size(); i++) {
@@ -495,6 +503,5 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
 
         AlertDialog alertDialog = alertDialogBuilder.create();
         alertDialog.show();
-
     }
 }

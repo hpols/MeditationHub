@@ -29,4 +29,5 @@ public class Constants {
     public static final String LOGIN_BOO = "is_login";
     public static final String PLAYER_CHANGE = "play_button_update";
     public static final String PLAYER_DELAY = "play_delay_ui";
+    public static final String SWIPE_REFRESH = "swipe_refresh";
 }
