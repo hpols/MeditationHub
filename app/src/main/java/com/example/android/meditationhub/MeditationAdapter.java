@@ -24,6 +24,7 @@ import com.example.android.meditationhub.model.MeditationLocal;
 import com.example.android.meditationhub.util.MedUtils;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.material.snackbar.Snackbar;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.storage.FirebaseStorage;
@@ -54,7 +55,7 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
     public interface AdapterInterface {
         void goToPlayer(MeditationLocal selectedMed, Uri medUri, ImageView thumbIv, boolean play);
 
-        void download(Uri uri, MeditationLocal filename, int medPos);
+        void download(Uri uri, MeditationLocal selevtedMed, int medPos);
 
         void remove(int medPos, MeditationLocal selectedMed);
     }
@@ -202,9 +203,22 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
             medVh.thumbIv.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    adapterInterface.goToPlayer(selectedMed, medVh.medUri, medVh.thumbIv, false);
+                    if (selectedMed.getStorage() != null) {
+                        adapterInterface.goToPlayer(selectedMed, medVh.medUri, medVh.thumbIv, false);
+                    } else {
+                        Snackbar downloadSnack = Snackbar
+                                .make(medVh.durationTv, "This meditation has not been downloaded.", Snackbar.LENGTH_SHORT)
+                                .setAction("Download Now", new View.OnClickListener() {
+                                    @Override
+                                    public void onClick(View view) {
+                                        adapterInterface.download(medVh.medUri, selectedMed, medPos);
+                                    }
+                                });
+                        downloadSnack.show();
+                    }
                 }
             });
+
             medVh.thumbIv.setOnLongClickListener(new View.OnLongClickListener() {
                 @Override
                 public boolean onLongClick(View view) {

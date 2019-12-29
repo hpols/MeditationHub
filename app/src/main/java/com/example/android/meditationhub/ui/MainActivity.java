@@ -327,11 +327,11 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
      * download the meditation. In part based on: https://gist.github.com/emaillenin/9a0fea5a6924ddb23b8dd620392e745f
      *
      * @param uri         of the audio file to be downloaded
-     * @param selectedMed the pojo of the meditation in question
+     * @param selevtedMed the pojo of the meditation in question
      * @param medPos      the position of the meditation in the adapter
      */
     @Override
-    public void download(Uri uri, final MeditationLocal selectedMed, final int medPos) {
+    public void download(Uri uri, final MeditationLocal selevtedMed, final int medPos) {
 
         //setup the snackbar to track the download
         final Snackbar bar = Snackbar.make(mainBinding.getRoot(), "", Snackbar.LENGTH_INDEFINITE);
@@ -343,7 +343,7 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
         // see https://www.dev2qa.com/android-snackbar-example/
         View customView = getLayoutInflater().inflate(R.layout.download_prog, null);
         TextView snackMes = customView.findViewById(R.id.snackbar_text);
-        String snackText = getString(R.string.download_snack) + selectedMed.getTitle();
+        String snackText = getString(R.string.download_snack) + selevtedMed.getTitle();
         snackMes.setText(snackText);
         final ProgressBar snackProg = customView.findViewById(R.id.circularProgressbar);
         snackProg.setMax(0);
@@ -360,7 +360,7 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
         if (!file.exists())
             file.mkdirs();
 
-        destination += "/" + selectedMed.getFilename();
+        destination += "/" + selevtedMed.getFilename();
         final Uri destinationUri = Uri.parse("file://" + destination);
 
         //create the download request
@@ -431,9 +431,9 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
                             EntryExecutor.getInstance().diskIO().execute(new Runnable() {
                                 @Override
                                 public void run() {
-                                    selectedMed.setStorage(String.valueOf(contentUri));
-                                    meditationLocalDb.meditationLocalDao().updateEntry(selectedMed);
-                                    Log.v(TAG, "Updated meditation: " + selectedMed.toString());
+                                    selevtedMed.setStorage(String.valueOf(contentUri));
+                                    meditationLocalDb.meditationLocalDao().updateEntry(selevtedMed);
+                                    Log.v(TAG, "Updated meditation: " + selevtedMed.toString());
                                 }
                             });
                             bar.dismiss();
