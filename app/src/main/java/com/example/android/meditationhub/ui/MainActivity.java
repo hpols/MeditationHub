@@ -185,10 +185,10 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
 
     private void setItems() {
         if (isOnline) {
-                medAdapter.setItems(itemsOnline);
-            } else {
-                medAdapter.setItems(itemsOffline);
-            }
+            medAdapter.setItems(itemsOnline);
+        } else {
+            medAdapter.setItems(itemsOffline);
+        }
     }
 
     private void checkFirebaseForUpdates() {
@@ -261,7 +261,9 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
                 }
             }
         }
-        itemsOffline.add(new Header("Go online to view all available meditations."));
+        if (itemsOnline.size() != itemsOffline.size()) {
+            itemsOffline.add(new Header("~ Go online to view all available meditations ~"));
+        }
 
     }
 
