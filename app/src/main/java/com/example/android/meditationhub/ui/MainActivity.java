@@ -11,7 +11,6 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -74,32 +73,36 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
     private DatabaseReference dbRefMed;
 
     private MeditationAdapter medAdapter;
+    private NetworkReceiver networkReceiver = new NetworkReceiver();
 
-    private ActivityMainBinding mainBinding;
+    private ActivityMainBinding mainBinder;
     List<String> keys = new ArrayList<>();
     List<MeditationLocal> meds = new ArrayList<>();
-    List<ItemList> items = new ArrayList<>();
+    List<ItemList> itemsOnline = new ArrayList<>();
+    List<ItemList> itemsOffline = new ArrayList<>();
 
     SharedPreferences sharedPref;
     SharedPreferences.Editor sharedPrefEd;
     private IntentFilter intentFilter;
 
+    boolean isOnline;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        mainBinding = DataBindingUtil.setContentView(this, R.layout.activity_main);
+        mainBinder = DataBindingUtil.setContentView(this, R.layout.activity_main);
 
-        mainBinding.swipeRefresher.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+        mainBinder.swipeRefresher.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
             public void onRefresh() {
-                if (MedUtils.isInternetAvailable(MainActivity.this)) {
+                if (isOnline) {
                     checkFirebaseForUpdates();
                     createOrderedItemList();
                     medAdapter.notifyDataSetChanged();
                 } else {
                     Toast.makeText(MainActivity.this, "Go online to check for updates",
                             Toast.LENGTH_SHORT).show();
-                    mainBinding.swipeRefresher.setRefreshing(false);
+                    mainBinder.swipeRefresher.setRefreshing(false);
                 }
             }
         });
@@ -108,24 +111,56 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
         sharedPrefEd = sharedPref.edit();
         sharedPrefEd.apply();
 
-        intentFilter = new IntentFilter(); //setup intents for broadcastReceiver
-        intentFilter.addAction(ConnectivityManager.EXTRA_NO_CONNECTIVITY);
+        isOnline = MedUtils.isInternetAvailable(this);
 
         fireDb = FirebaseDatabase.getInstance();
         dbRefMed = fireDb.getReference("meditations");
         medDb = MeditationLocalDb.getInstance(this);
         fireAuth = FirebaseAuth.getInstance();
 
-        if (MedUtils.isInternetAvailable(this)) {
+        if (isOnline) {
             checkFirebaseForUpdates();
         } else {
             setupViewModel();
         }
-
     }
 
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        intentFilter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
+        registerReceiver(networkReceiver, intentFilter);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        unregisterReceiver(networkReceiver);
+    }
+
+    class NetworkReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Log.v(TAG, "Network Receiver has been fired");
+            isOnline = MedUtils.isInternetAvailable(MainActivity.this);
+
+            checkFirebaseForUpdates();
+            createOrderedItemList();
+            if (medAdapter != null) {
+                setItems();
+                medAdapter.notifyDataSetChanged();
+            }
+
+        }
+    }
+
+    // ––– GENERAL METHODS ––– //
+
     private void setupMedAdapter() {
-        medAdapter = new MeditationAdapter(this, fireAuth, items, this);
+        medAdapter = new MeditationAdapter(this, fireAuth, this);
+        setItems();
 
         final int numOfCol = MedUtils.noOfCols(MainActivity.this);
 
@@ -143,62 +178,21 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
             }
         });
 
-        mainBinding.meditationRv.setLayoutManager(layoutMan);
-        mainBinding.meditationRv.setHasFixedSize(true);
-        mainBinding.meditationRv.setAdapter(medAdapter);
+        mainBinder.meditationRv.setLayoutManager(layoutMan);
+        mainBinder.meditationRv.setHasFixedSize(true);
+        mainBinder.meditationRv.setAdapter(medAdapter);
     }
 
-    //setup the viewModel
-    private void setupViewModel() {
-        MeditationLocalViewModel viewModel
-                = ViewModelProviders.of(this).get(MeditationLocalViewModel.class);
-        viewModel.getMeditationLocalEntries().observe(this, new Observer<List<MeditationLocal>>() {
-            @Override
-            public void onChanged(@Nullable List<MeditationLocal> meditationLocals) {
-                Log.d(TAG, "Updating entries from LiveData in ViewModel. Current count: " + meditationLocals.size());
-                meds = meditationLocals;
-                createOrderedItemList();
-                setupMedAdapter();
-
+    private void setItems() {
+        if (isOnline) {
+                medAdapter.setItems(itemsOnline);
+            } else {
+                medAdapter.setItems(itemsOffline);
             }
-        });
     }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-        registerReceiver(networkReceiver, intentFilter);
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        unregisterReceiver(networkReceiver);
-    }
-
-    //stay up to date with playback controls in the UI
-    private final BroadcastReceiver networkReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            Log.v(TAG, "Network Receiver has been fired");
-            if (intent != null && intent.getAction().equals(ConnectivityManager.CONNECTIVITY_ACTION)) {
-                ConnectivityManager cm =
-                        (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-                assert cm != null;
-                NetworkInfo networkInfo = cm.getActiveNetworkInfo();
-                boolean isConnected = networkInfo != null && networkInfo.isConnectedOrConnecting();
-                if (isConnected) {
-                    Log.d(TAG, "We have internet connection. Good to go.");
-                    checkFirebaseForUpdates();
-                    createOrderedItemList();
-                    medAdapter.notifyDataSetChanged();
-                }
-            }
-        }
-    };
 
     private void checkFirebaseForUpdates() {
-        mainBinding.swipeRefresher.setRefreshing(true);
+        mainBinder.swipeRefresher.setRefreshing(true);
         dbRefMed.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
@@ -208,38 +202,70 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
                     MeditationLocal meditation = fbKeys.getValue(MeditationLocal.class);
                     assert meditation != null;
                     meditation.setId(fbKeys.getKey());
-                    addToLocalDb(meditation);
+                    updateLocalDb(meditation);
                 }
 
-                mainBinding.swipeRefresher.setRefreshing(false);
+                mainBinder.swipeRefresher.setRefreshing(false);
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError databaseError) {
-                mainBinding.swipeRefresher.setRefreshing(false);
+                mainBinder.swipeRefresher.setRefreshing(false);
             }
         });
 
         setupViewModel();
     }
 
-    private void createOrderedItemList() {
-        items.clear();
-        Collections.sort(meds);
-        String prevCategory = null;
-        for (int i = 0; i < meds.size(); i++) {
-            String currCategory = meds.get(i).getCategory();
-            if (prevCategory != null && prevCategory.equals(currCategory)) {
-                items.add(meds.get(i));
-            } else {
-                items.add(new Header(currCategory));
-                items.add(meds.get(i));
-                prevCategory = currCategory;
+    //setup the viewModel
+    private void setupViewModel() {
+        Log.v(TAG, "Steup ViewModel called");
+        MeditationLocalViewModel viewModel
+                = ViewModelProviders.of(this).get(MeditationLocalViewModel.class);
+        viewModel.getMeditationLocalEntries().observe(this, new Observer<List<MeditationLocal>>() {
+            @Override
+            public void onChanged(@Nullable List<MeditationLocal> meditationLocals) {
+                meds = meditationLocals;
+                Log.d(TAG, "Updating entries from LiveData in ViewModel. Current count: " + meds.size());
+                createOrderedItemList();
+                setupMedAdapter();
             }
-        }
+        });
     }
 
-    private void addToLocalDb(final MeditationLocal meditations) {
+    private void createOrderedItemList() {
+        Log.v(TAG, "Create ordered List called");
+        itemsOnline.clear();
+        itemsOffline.clear();
+        Collections.sort(meds);
+        String prevCatOnline = null, prevCatOffline = null;
+        for (int i = 0; i < meds.size(); i++) {
+            String currCatOnline = meds.get(i).getCategory();
+            if (prevCatOnline != null && prevCatOnline.equals(currCatOnline)) {
+                itemsOnline.add(meds.get(i));
+            } else {
+                itemsOnline.add(new Header(currCatOnline));
+                itemsOnline.add(meds.get(i));
+                prevCatOnline = currCatOnline;
+            }
+
+            //also create an offline list, for easy switching between the two states
+            if (meds.get(i).getStorage() != null) {
+                String currCatOffline = meds.get(i).getCategory();
+                if (prevCatOffline != null && prevCatOffline.equals(currCatOffline)) {
+                    itemsOffline.add(meds.get(i));
+                } else {
+                    itemsOffline.add(new Header(currCatOffline));
+                    itemsOffline.add(meds.get(i));
+                    prevCatOffline = currCatOffline;
+                }
+            }
+        }
+        itemsOffline.add(new Header("Go online to view all available meditations."));
+
+    }
+
+    private void updateLocalDb(final MeditationLocal meditations) {
         EntryExecutor.getInstance().diskIO().execute(new Runnable() {
             @Override
             public void run() {
@@ -282,7 +308,7 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
         });
     }
 
-    /* MENU METHODS */
+    // ––– MENU METHODS ––– //
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -331,7 +357,7 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
         return super.onOptionsItemSelected(item);
     }
 
-    /* INTERFACE METHODS */
+    // ––– INTERFACE METHODS ––– //
 
     /**
      * start playermethod passing all necessary information to it
@@ -369,7 +395,7 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
     public void download(Uri uri, final MeditationLocal selectedMed, final int medPos) {
 
         //setup the snackbar to track the download
-        final Snackbar bar = Snackbar.make(mainBinding.getRoot(), "", Snackbar.LENGTH_INDEFINITE);
+        final Snackbar bar = Snackbar.make(mainBinder.getRoot(), "", Snackbar.LENGTH_INDEFINITE);
 
         // Get the view object.
         Snackbar.SnackbarLayout snackbarView = (Snackbar.SnackbarLayout) bar.getView();

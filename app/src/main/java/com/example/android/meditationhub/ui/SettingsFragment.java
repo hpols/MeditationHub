@@ -95,7 +95,8 @@ public class SettingsFragment extends PreferenceFragment implements
 
             try {
                 if (Build.VERSION.SDK_INT < 23) {
-                    AudioManager audioManager = (AudioManager) getActivity().getApplicationContext().getSystemService(Context.AUDIO_SERVICE);
+                    AudioManager audioManager = (AudioManager) getActivity().getApplicationContext()
+                            .getSystemService(Context.AUDIO_SERVICE);
                     audioManager.setRingerMode(AudioManager.RINGER_MODE_SILENT);
                 } else {
                     this.requestDNDForApi23AndUp();

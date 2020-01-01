@@ -58,9 +58,8 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
         void remove(int medPos, MeditationLocal selectedMed);
     }
 
-    public MeditationAdapter(Context ctxt, FirebaseAuth mAuth, List<ItemList> items, AdapterInterface adapterInterface) {
+    public MeditationAdapter(Context ctxt, FirebaseAuth mAuth, AdapterInterface adapterInterface) {
         this.ctxt = ctxt;
-        this.items = items;
         this.adapterInterface = adapterInterface;
 
         user = mAuth.getCurrentUser();
@@ -233,6 +232,10 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
 
     public static void logout() {
         user = null;
+    }
+
+    public void setItems(List<ItemList> items) {
+        this.items = items;
     }
 
     private void removeAudio(final int position, MeditationLocal selectedMed) {
