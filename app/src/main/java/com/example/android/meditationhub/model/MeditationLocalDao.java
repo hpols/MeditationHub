@@ -16,23 +16,23 @@ public interface MeditationLocalDao {
     //––– CREATE Methods –––//
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    long createEntry(MeditationLocal meditationLocal);
+    long createMed(MeditationLocal meditationLocal);
 
     //––– READ Methods –––//
 
     @Query("SELECT * FROM meditations")
-    LiveData<List<MeditationLocal>> getAllEntries();
+    LiveData<List<MeditationLocal>> getAll();
 
-    @Query("SELECT * FROM meditations WHERE filename LIKE :filename")
-    MeditationLocal getMeditation(String filename);
+    @Query("SELECT * FROM meditations WHERE id LIKE :id")
+    MeditationLocal getMedById(String id);
 
 
     //––– UPDATE Methods –––//
 
     @Update(onConflict = OnConflictStrategy.IGNORE)
-    int updateEntry(MeditationLocal meditationLocal);
+    int updateMed(MeditationLocal meditationLocal);
 
     // –––DELETE METHODS –––//
     @Delete
-    void deleteEntry(MeditationLocal meditationLocal);
+    void deleteMed(MeditationLocal meditationLocal);
 }

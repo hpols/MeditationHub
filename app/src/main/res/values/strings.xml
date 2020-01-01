@@ -35,4 +35,6 @@
     <string name="delay_message">Your meditation will begin in %1$s seconds.</string>
     <string name="download_snack">Downloading:</string>
     <string name="no_internet">No Internet</string>
+    <string name="remove_audio_toast">A long click will remove the audio of a meditation from your device. However, this one is not on yur device.</string>
+    <string name="viewing_online_meds">Go online to view the meditations you have not downloaded yet.</string>
 </resources>

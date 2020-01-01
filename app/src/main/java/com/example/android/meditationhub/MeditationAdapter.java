@@ -45,23 +45,20 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
 
     private Context ctxt;
     private static FirebaseUser user;
-
-    private List<MeditationLocal> meditations;
     private List<ItemList> items;
 
-    //keep intouch with MainActivity through this interface (clicks, downloads, removes)
+    //keep in touch with MainActivity through this interface (clicks, downloads, removes)
     private final AdapterInterface adapterInterface;
 
     public interface AdapterInterface {
         void goToPlayer(MeditationLocal selectedMed, Uri medUri, ImageView thumbIv, boolean play);
 
-        void download(Uri uri, MeditationLocal selevtedMed, int medPos);
+        void download(Uri uri, MeditationLocal selectedMed, int medPos);
 
         void remove(int medPos, MeditationLocal selectedMed);
     }
 
-    public MeditationAdapter(Context ctxt, FirebaseAuth mAuth, List<ItemList> items,
-                             AdapterInterface adapterInterface) {
+    public MeditationAdapter(Context ctxt, FirebaseAuth mAuth, List<ItemList> items, AdapterInterface adapterInterface) {
         this.ctxt = ctxt;
         this.items = items;
         this.adapterInterface = adapterInterface;
@@ -94,6 +91,8 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
     @Override
     public void onBindViewHolder(@NonNull final RecyclerView.ViewHolder Vh, final int position) {
 
+
+        //check whether Meditation or header
         if (Vh instanceof HeaderVH) {
             final HeaderVH headVh = (HeaderVH) Vh;
 
@@ -102,16 +101,9 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
         } else {
             final MeditationVH medVh = (MeditationVH) Vh;
 
-            //check whether Meditation or header
-            final int medPos = position;
-
             final MeditationLocal selectedMed = (MeditationLocal) items.get(position);
 
             Log.d(TAG, "this meditation = " + selectedMed.toString());
-
-            final String removeText = ctxt.getString((R.string.alert_title),
-                    selectedMed.getTitle());
-            //medVh.alertTv.setText(removeText);
 
             //set Action image and its responses to clicks
             int actionImage = android.R.drawable.stat_sys_download;
@@ -165,7 +157,7 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
                                             ref.getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
                                                 @Override
                                                 public void onSuccess(Uri uri) {
-                                                    adapterInterface.download(uri, selectedMed, medPos);
+                                                    adapterInterface.download(uri, selectedMed, position);
                                                 }
                                             }).addOnFailureListener(new OnFailureListener() {
                                                 @Override
@@ -211,7 +203,7 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
                                 .setAction("Download Now", new View.OnClickListener() {
                                     @Override
                                     public void onClick(View view) {
-                                        adapterInterface.download(medVh.medUri, selectedMed, medPos);
+                                        adapterInterface.download(medVh.medUri, selectedMed, position);
                                     }
                                 });
                         downloadSnack.show();
@@ -243,9 +235,9 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
         user = null;
     }
 
-    public void removeAudio(final int position, MeditationLocal selectedMed) {
+    private void removeAudio(final int position, MeditationLocal selectedMed) {
         if (selectedMed.getStorage().isEmpty()) {
-            Toast.makeText(ctxt, "A long click will remove the audio of a meditation from your device. However, this one is not on yur device.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(ctxt, ctxt.getString(R.string.remove_audio_toast), Toast.LENGTH_SHORT).show();
         } else {
             adapterInterface.remove(position, selectedMed);
         }
@@ -254,7 +246,7 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
     class HeaderVH extends RecyclerView.ViewHolder {
         TextView headerTv;
 
-        public HeaderVH(@NonNull View itemView) {
+        HeaderVH(@NonNull View itemView) {
             super(itemView);
             headerTv = itemView.findViewById(R.id.header_tv);
         }
@@ -273,6 +265,7 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
         MeditationVH(final View view) {
             super(view);
 
+            //use the full width of the screen
             DisplayMetrics displaymetrics = new DisplayMetrics();
             ((Activity) ctxt).getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
 
@@ -283,8 +276,6 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
             durationTv = itemView.findViewById(R.id.duration_tv);
             actionIb = itemView.findViewById(R.id.action_ib);
             thumbIv = itemView.findViewById(R.id.thumb_iv);
-
         }
-
     }
 }

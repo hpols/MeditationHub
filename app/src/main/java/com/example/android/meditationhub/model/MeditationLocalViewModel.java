@@ -19,7 +19,7 @@ public class MeditationLocalViewModel extends AndroidViewModel {
         super(application);
         MeditationLocalDb db = MeditationLocalDb.getInstance(this.getApplication());
         Log.d(TAG, "ViewModel is retrieving the entries from the db");
-        meditationLocalEntries = db.meditationLocalDao().getAllEntries();
+        meditationLocalEntries = db.meditationLocalDao().getAll();
     }
 
     public LiveData<List<MeditationLocal>> getMeditationLocalEntries() {

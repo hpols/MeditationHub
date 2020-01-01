@@ -44,7 +44,6 @@ import com.example.android.meditationhub.R;
 import com.example.android.meditationhub.databinding.ActivityMainBinding;
 import com.example.android.meditationhub.model.Header;
 import com.example.android.meditationhub.model.ItemList;
-import com.example.android.meditationhub.model.MeditationFireBase;
 import com.example.android.meditationhub.model.MeditationLocal;
 import com.example.android.meditationhub.model.MeditationLocalDb;
 import com.example.android.meditationhub.model.MeditationLocalViewModel;
@@ -71,13 +70,14 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
 
     private FirebaseAuth fireAuth;
     private FirebaseDatabase fireDb;
-    private MeditationLocalDb meditationLocalDb;
+    private MeditationLocalDb medDb;
     private DatabaseReference dbRefMed;
 
     private MeditationAdapter medAdapter;
 
     private ActivityMainBinding mainBinding;
     List<String> keys = new ArrayList<>();
+    List<MeditationLocal> meds = new ArrayList<>();
     List<ItemList> items = new ArrayList<>();
 
     SharedPreferences sharedPref;
@@ -92,7 +92,15 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
         mainBinding.swipeRefresher.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
             public void onRefresh() {
-                checkFirebaseForUpdates();
+                if (MedUtils.isInternetAvailable(MainActivity.this)) {
+                    checkFirebaseForUpdates();
+                    createOrderedItemList();
+                    medAdapter.notifyDataSetChanged();
+                } else {
+                    Toast.makeText(MainActivity.this, "Go online to check for updates",
+                            Toast.LENGTH_SHORT).show();
+                    mainBinding.swipeRefresher.setRefreshing(false);
+                }
             }
         });
 
@@ -105,48 +113,55 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
 
         fireDb = FirebaseDatabase.getInstance();
         dbRefMed = fireDb.getReference("meditations");
-        meditationLocalDb = MeditationLocalDb.getInstance(this);
+        medDb = MeditationLocalDb.getInstance(this);
         fireAuth = FirebaseAuth.getInstance();
 
-        medAdapter = new MeditationAdapter(MainActivity.this, fireAuth, items,
-                MainActivity.this);
+        if (MedUtils.isInternetAvailable(this)) {
+            checkFirebaseForUpdates();
+        } else {
+            setupViewModel();
+        }
 
-        //setup viewModel
+    }
+
+    private void setupMedAdapter() {
+        medAdapter = new MeditationAdapter(this, fireAuth, items, this);
+
+        final int numOfCol = MedUtils.noOfCols(MainActivity.this);
+
+        GridLayoutManager layoutMan = new GridLayoutManager(MainActivity.this, numOfCol);
+        layoutMan.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
+            @Override
+            public int getSpanSize(int position) {
+                switch (medAdapter.getItemViewType(position)) {
+                    case ItemList.TYPE_HEADER:
+                        return numOfCol;
+                    case ItemList.TYPE_ITEM:
+                    default:
+                        return 1;
+                }
+            }
+        });
+
+        mainBinding.meditationRv.setLayoutManager(layoutMan);
+        mainBinding.meditationRv.setHasFixedSize(true);
+        mainBinding.meditationRv.setAdapter(medAdapter);
+    }
+
+    //setup the viewModel
+    private void setupViewModel() {
         MeditationLocalViewModel viewModel
                 = ViewModelProviders.of(this).get(MeditationLocalViewModel.class);
         viewModel.getMeditationLocalEntries().observe(this, new Observer<List<MeditationLocal>>() {
             @Override
             public void onChanged(@Nullable List<MeditationLocal> meditationLocals) {
-                Log.d(TAG, "Updating entries from LiveData in ViewModel");
-                createOrderedItemList(meditationLocals);
+                Log.d(TAG, "Updating entries from LiveData in ViewModel. Current count: " + meditationLocals.size());
+                meds = meditationLocals;
+                createOrderedItemList();
+                setupMedAdapter();
 
-                final int numOfCol = MedUtils.noOfCols(MainActivity.this);
-
-                GridLayoutManager layoutMan = new GridLayoutManager(MainActivity.this,
-                        numOfCol);
-                layoutMan.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
-                    @Override
-                    public int getSpanSize(int position) {
-                        switch (medAdapter.getItemViewType(position)) {
-                            case ItemList.TYPE_HEADER:
-                                return numOfCol;
-                            case ItemList.TYPE_ITEM:
-                            default:
-                                return 1;
-                        }
-                    }
-                });
-
-                mainBinding.meditationRv.setLayoutManager(layoutMan);
-                mainBinding.meditationRv.setHasFixedSize(true);
-                mainBinding.meditationRv.setAdapter(medAdapter);
             }
         });
-
-        if (medAdapter.getItemCount() == 0) {
-            Toast.makeText(this, "Go online to view & retrieve the available Meditations.",
-                    Toast.LENGTH_SHORT).show();
-        }
     }
 
     @Override
@@ -165,6 +180,7 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
     private final BroadcastReceiver networkReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
+            Log.v(TAG, "Network Receiver has been fired");
             if (intent != null && intent.getAction().equals(ConnectivityManager.CONNECTIVITY_ACTION)) {
                 ConnectivityManager cm =
                         (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -174,6 +190,8 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
                 if (isConnected) {
                     Log.d(TAG, "We have internet connection. Good to go.");
                     checkFirebaseForUpdates();
+                    createOrderedItemList();
+                    medAdapter.notifyDataSetChanged();
                 }
             }
         }
@@ -185,19 +203,14 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
             @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
 
-                mainBinding.meditationListPb.setVisibility(View.VISIBLE);
-                for (DataSnapshot keyNodes : dataSnapshot.getChildren()) {
-                    keys.add(keyNodes.getKey());
-                    MeditationFireBase meditation = keyNodes.getValue(MeditationFireBase.class);
+                for (DataSnapshot fbKeys : dataSnapshot.getChildren()) {
+                    MainActivity.this.keys.add(fbKeys.getKey());
+                    MeditationLocal meditation = fbKeys.getValue(MeditationLocal.class);
                     assert meditation != null;
-                    addToLocalDb(meditation, keyNodes.getKey());
-                    Log.v(getClass().getSimpleName(), "meditation added");
+                    meditation.setId(fbKeys.getKey());
+                    addToLocalDb(meditation);
                 }
-                mainBinding.meditationListPb.setVisibility(View.GONE);
 
-                if (medAdapter != null) {
-                    medAdapter.notifyDataSetChanged();
-                }
                 mainBinding.swipeRefresher.setRefreshing(false);
             }
 
@@ -207,58 +220,69 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
             }
         });
 
+        setupViewModel();
     }
 
-    private void createOrderedItemList(List<MeditationLocal> meditationLocals) {
-        Collections.sort(meditationLocals);
+    private void createOrderedItemList() {
+        items.clear();
+        Collections.sort(meds);
         String prevCategory = null;
-        for (int i = 0; i < meditationLocals.size(); i++) {
-            String currCategory = meditationLocals.get(i).getCategory();
+        for (int i = 0; i < meds.size(); i++) {
+            String currCategory = meds.get(i).getCategory();
             if (prevCategory != null && prevCategory.equals(currCategory)) {
-                items.add(meditationLocals.get(i));
+                items.add(meds.get(i));
             } else {
                 items.add(new Header(currCategory));
-                items.add(meditationLocals.get(i));
+                items.add(meds.get(i));
                 prevCategory = currCategory;
             }
         }
     }
 
-    private void addToLocalDb(final MeditationFireBase meditations, final String key) {
+    private void addToLocalDb(final MeditationLocal meditations) {
         EntryExecutor.getInstance().diskIO().execute(new Runnable() {
             @Override
             public void run() {
-                String receivedMeditationFilename = meditations.getFilename();
-                MeditationLocal storedMeditation = meditationLocalDb.meditationLocalDao()
-                        .getMeditation(receivedMeditationFilename);
-                if (storedMeditation == null) {
-                    final MeditationLocal receivedMeditation = new MeditationLocal();
-                    receivedMeditation.setTitle(meditations.getTitle());
-                    receivedMeditation.setSubtitle(meditations.getSubtitle());
-                    receivedMeditation.setFilename(meditations.getFilename());
-                    receivedMeditation.setCategory(meditations.getCategory());
-                    receivedMeditation.setId(key);
-                    receivedMeditation.setStorage(null);
-
-                    meditationLocalDb.meditationLocalDao().createEntry(receivedMeditation);
+                final boolean[] toBeUpdated = new boolean[1];
+                String receivedMedId = meditations.getId();
+                MeditationLocal storedMed = medDb.meditationLocalDao().getMedById(receivedMedId);
+                if (storedMed == null) {
+                    medDb.meditationLocalDao().createMed(meditations);
                 } else { //check for differences and update as necessary
-                    if (!meditations.getTitle().equals(storedMeditation.getTitle())) {
-                        storedMeditation.setTitle(meditations.getTitle());
+                    String logT = null, logS = null, logF = null, logC = null;
+
+                    if (!meditations.getTitle().equals(storedMed.getTitle())) {
+                        storedMed.setTitle(meditations.getTitle());
+                        logT = "Title has been changed to: " + meditations.getTitle() + ", ";
+                        toBeUpdated[0] = true;
                     }
-                    if (!meditations.getSubtitle().equals(storedMeditation.getStorage())) {
-                        storedMeditation.setSubtitle(meditations.getSubtitle());
+                    if (!meditations.getSubtitle().equals(storedMed.getSubtitle())) {
+                        storedMed.setSubtitle(meditations.getSubtitle());
+                        logS = "Subtitle has been changed to: " + meditations.getSubtitle() + ", ";
+                        toBeUpdated[0] = true;
                     }
-                    if (!meditations.getFilename().equals(storedMeditation.getFilename())) {
-                        storedMeditation.setFilename(meditations.getFilename());
+                    if (!meditations.getFilename().equals(storedMed.getFilename())) {
+                        storedMed.setFilename(meditations.getFilename());
+                        logF = "Filename has been changed to: " + meditations.getFilename() + ", ";
+                        toBeUpdated[0] = true;
                     }
-                    if (!meditations.getCategory().equals(storedMeditation.getCategory())) {
-                        storedMeditation.setCategory(meditations.getCategory());
+                    if (!meditations.getCategory().equals(storedMed.getCategory())) {
+                        storedMed.setCategory(meditations.getCategory());
+                        logC = "Category has been changed to: " + meditations.getCategory() + ", ";
+                        toBeUpdated[0] = true;
                     }
                     //don't touch Id or Storage
+                    if (toBeUpdated[0]) {
+                        medDb.meditationLocalDao().updateMed(storedMed);
+                        Log.v(TAG, "Meditation no. " + meditations.getId() + ": " + logT + logS + logF + logC);
+                    }
+
                 }
             }
         });
     }
+
+    /* MENU METHODS */
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -307,8 +331,19 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
         return super.onOptionsItemSelected(item);
     }
 
+    /* INTERFACE METHODS */
+
+    /**
+     * start playermethod passing all necessary information to it
+     *
+     * @param selectedMed is the meditation to be played
+     * @param medUri      is the uri of the meditation
+     * @param thumbIv     is the thumbnail
+     * @param play        indicates whether the player should start automatically once loaded
+     */
     @Override
-    public void goToPlayer(MeditationLocal selectedMed, Uri medUri, ImageView thumbIv, boolean play) {
+    public void goToPlayer(MeditationLocal selectedMed, Uri medUri, ImageView thumbIv,
+                           boolean play) {
         Intent openPlayer = new Intent(this, PlayerActivity.class);
         openPlayer.putExtra(Constants.SELECTED_MED, selectedMed);
         openPlayer.putExtra(Constants.URI, medUri);
@@ -327,11 +362,11 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
      * download the meditation. In part based on: https://gist.github.com/emaillenin/9a0fea5a6924ddb23b8dd620392e745f
      *
      * @param uri         of the audio file to be downloaded
-     * @param selevtedMed the pojo of the meditation in question
+     * @param selectedMed the pojo of the meditation in question
      * @param medPos      the position of the meditation in the adapter
      */
     @Override
-    public void download(Uri uri, final MeditationLocal selevtedMed, final int medPos) {
+    public void download(Uri uri, final MeditationLocal selectedMed, final int medPos) {
 
         //setup the snackbar to track the download
         final Snackbar bar = Snackbar.make(mainBinding.getRoot(), "", Snackbar.LENGTH_INDEFINITE);
@@ -343,7 +378,7 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
         // see https://www.dev2qa.com/android-snackbar-example/
         View customView = getLayoutInflater().inflate(R.layout.download_prog, null);
         TextView snackMes = customView.findViewById(R.id.snackbar_text);
-        String snackText = getString(R.string.download_snack) + selevtedMed.getTitle();
+        String snackText = getString(R.string.download_snack) + selectedMed.getTitle();
         snackMes.setText(snackText);
         final ProgressBar snackProg = customView.findViewById(R.id.circularProgressbar);
         snackProg.setMax(0);
@@ -360,7 +395,7 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
         if (!file.exists())
             file.mkdirs();
 
-        destination += "/" + selevtedMed.getFilename();
+        destination += "/" + selectedMed.getFilename();
         final Uri destinationUri = Uri.parse("file://" + destination);
 
         //create the download request
@@ -431,9 +466,9 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
                             EntryExecutor.getInstance().diskIO().execute(new Runnable() {
                                 @Override
                                 public void run() {
-                                    selevtedMed.setStorage(String.valueOf(contentUri));
-                                    meditationLocalDb.meditationLocalDao().updateEntry(selevtedMed);
-                                    Log.v(TAG, "Updated meditation: " + selevtedMed.toString());
+                                    selectedMed.setStorage(String.valueOf(contentUri));
+                                    medDb.meditationLocalDao().updateMed(selectedMed);
+                                    Log.v(TAG, "Updated meditation: " + selectedMed.toString());
                                 }
                             });
                             bar.dismiss();
@@ -483,7 +518,7 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
                                 @Override
                                 public void run() {
                                     selectedMed.setStorage(null);
-                                    meditationLocalDb.meditationLocalDao().updateEntry(selectedMed);
+                                    medDb.meditationLocalDao().updateMed(selectedMed);
                                 }
 
                                 @Override
