@@ -408,8 +408,8 @@ public class MediaPlayerService extends Service implements MediaPlayer.OnErrorLi
                 FOREGROUND_CHANNEL_ID);
         notBuild.setContent(remoteViews)
                 .setLargeIcon(BitmapFactory.decodeResource(getResources(),
-                        R.drawable.ic_meditation_hub))
-                .setSmallIcon(R.drawable.ic_meditation_hub)
+                        R.drawable.ic_launcher_foreground))
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
                 .setCategory(NotificationCompat.CATEGORY_SERVICE)
                 .setOnlyAlertOnce(true)
                 .setOngoing(true)

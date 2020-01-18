@@ -84,8 +84,10 @@ public class MedUtils {
         if (data != null) {
             return BitmapFactory.decodeByteArray(data, 0, data.length);
         } else {
-            return BitmapFactory.decodeResource(ctxt.getResources(), R.drawable.ic_meditation_hub);
+            return BitmapFactory.decodeResource(ctxt.getResources(), R.drawable.ic_launcher_foreground);
         }
+
+        //TODO: rework so that placeholder images is not set as bitmap (loses transparent bg & gets pixelated
     }
 
 

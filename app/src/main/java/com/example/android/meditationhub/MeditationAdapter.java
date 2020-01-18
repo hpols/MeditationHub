@@ -108,7 +108,7 @@ public class MeditationAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
             int actionImage = android.R.drawable.stat_sys_download;
             if (selectedMed.getStorage() == null) {
                 medVh.thumbIv.setAlpha((float) 0.2);
-                medVh.thumbIv.setImageResource(R.drawable.ic_meditation_hub);
+                medVh.thumbIv.setImageResource(R.drawable.ic_launcher_foreground);
 
                 medVh.durationTv.setVisibility(View.INVISIBLE);
                 medVh.titleTv.setVisibility(View.VISIBLE);

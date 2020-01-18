@@ -75,6 +75,16 @@ public class PlayerActivity extends AppCompatActivity {
         intentFilter.addAction(Constants.PLAYER_DELAY);
     }
 
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        selectedMed = null;
+        coverArt = null;
+        medUri = null;
+        mediaPlayerService.setActivityIsDestroyed(true);
+        finish();
+    }
+
     private void initializeUI() {
         //setup the coverArt and titles
         MedUtils.displayMedInfo(coverArt, playBinding.thumbIv, playBinding.titleTv,

@@ -35,6 +35,7 @@ import androidx.databinding.DataBindingUtil;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.example.android.meditationhub.BuildConfig;
@@ -164,7 +165,13 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
 
         final int numOfCol = MedUtils.noOfCols(MainActivity.this);
 
-        GridLayoutManager layoutMan = new GridLayoutManager(MainActivity.this, numOfCol);
+        GridLayoutManager layoutMan = new GridLayoutManager(MainActivity.this, numOfCol) {
+            @Override
+            public void onLayoutCompleted(RecyclerView.State state) {
+                super.onLayoutCompleted(state);
+                mainBinder.swipeRefresher.setRefreshing(false);
+            }
+        };
         layoutMan.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
             @Override
             public int getSpanSize(int position) {
@@ -178,9 +185,12 @@ public class MainActivity extends AppCompatActivity implements MeditationAdapter
             }
         });
 
+
         mainBinder.meditationRv.setLayoutManager(layoutMan);
         mainBinder.meditationRv.setHasFixedSize(true);
         mainBinder.meditationRv.setAdapter(medAdapter);
+
+
     }
 
     private void setItems() {
